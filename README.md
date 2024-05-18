@@ -41,3 +41,10 @@ _14. SSRF Testing:_
 Checks for server-side request forgery vulnerabilities
 
 _15. Protocol-Level Vulnerability Testing:_ Tests for vulnerabilities at the network protocol level.
+
+# usage instructions
+Install Dependencies: Ensure you have all required dependencies installed. You can use the following command on the terminal:
+``pip install requests nmap kamene bs4 shodan scikit-learn coloramaRun``
+
+then execute :
+``scan.py``
