@@ -1,22 +1,45 @@
-import kamene.all as kamene
-from kamene.all import TCP, IP, sr1
+try:
+    from scapy.all import TCP, IP, sr1
+    SCAPY_AVAILABLE = True
+except ImportError:
+    SCAPY_AVAILABLE = False
 
 import concurrent.futures
 import requests
-import nmap
 import socket
-import kamene.all as kamene
-from bs4 import BeautifulSoup
+import os
 import json
 import time
 import re
 import subprocess
-import shodan
 import urllib3
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
-from kamene.all import *
 from colorama import Fore, Style, init
+
+# Optional imports
+try:
+    import nmap
+    NMAP_AVAILABLE = True
+except ImportError:
+    NMAP_AVAILABLE = False
+
+try:
+    import shodan
+    SHODAN_AVAILABLE = True
+except ImportError:
+    SHODAN_AVAILABLE = False
+
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.cluster import KMeans
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 init(autoreset=True)
@@ -27,6 +50,8 @@ class UltimateAdvancedWebScanner:
         self.threads = threads
 
     def advanced_port_scan(self):
+        if not NMAP_AVAILABLE:
+            return "Error: python-nmap not available. Install with: pip install python-nmap"
         try:
             scanner = nmap.PortScanner()
             scanner.scan(self.target, arguments='-sV -sC -O -T4')
@@ -57,18 +82,25 @@ class UltimateAdvancedWebScanner:
 
     def advanced_content_discovery(self):
         try:
-            wordlist = "/usr/share/wordlists/dirb/big.txt"
+            # Use a basic wordlist since the common wordlist file may not exist
+            basic_paths = [
+                'admin', 'login', 'wp-admin', 'administrator', 'dashboard',
+                'panel', 'config', 'backup', 'test', 'api', 'uploads',
+                'images', 'js', 'css', 'includes', 'phpmyadmin',
+                '.git', '.env', 'robots.txt', 'sitemap.xml'
+            ]
             discovered_paths = []
-            if not os.path.exists(wordlist):
-                return "Wordlist file does not exist."
-            with open(wordlist, "r") as file:
-                for line in file:
-                    path = line.strip()
-                    url = f"{self.target}/{path}"
-                    response = requests.get(url, verify=False)
+            
+            for path in basic_paths:
+                try:
+                    url = f"{self.target.rstrip('/')}/{path}"
+                    response = requests.get(url, verify=False, timeout=5)
                     if response.status_code == 200:
                         discovered_paths.append(url)
-            return discovered_paths
+                except:
+                    continue
+                    
+            return discovered_paths if discovered_paths else "No accessible paths found."
         except Exception as e:
             return f"Error in content discovery: {e}"
 
@@ -91,17 +123,18 @@ class UltimateAdvancedWebScanner:
     def cms_detection(self):
         try:
             response = requests.get(self.target, verify=False)
+            response_text = response.text.lower()
             cms_patterns = {
-                "WordPress": re.compile(r'wp-content|wp-includes'),
-                "Joomla": re.compile(r'Joomla!'),
-                "Drupal": re.compile(r'Drupal'),
-                "Magento": re.compile(r'Magento'),
-                "Shopify": re.compile(r'Shopify'),
-                "Wix": re.compile(r'Wix')
+                "WordPress": re.compile(r'wp-content|wp-includes|wordpress'),
+                "Joomla": re.compile(r'joomla!|/media/jui/'),
+                "Drupal": re.compile(r'drupal|/sites/all/'),
+                "Magento": re.compile(r'magento|/skin/frontend/'),
+                "Shopify": re.compile(r'shopify|shopify\.com'),
+                "Wix": re.compile(r'wix\.com|static\.wixstatic\.com')
             }
             detected_cms = []
             for cms, pattern in cms_patterns.items():
-                if pattern.search(response.text):
+                if pattern.search(response_text):
                     detected_cms.append(cms)
             return detected_cms if detected_cms else "No CMS detected."
         except Exception as e:
@@ -159,14 +192,14 @@ class UltimateAdvancedWebScanner:
             return f"Error in exploit check: {e}"
 
     def shodan_integration(self):
+        if not SHODAN_AVAILABLE:
+            return "Error: shodan not available. Install with: pip install shodan"
         try:
             api_key = "your_shodan_api_key"
             ip = socket.gethostbyname(self.target)
             api = shodan.Shodan(api_key)
             host = api.host(ip)
             return host
-        except shodan.APIError as e:
-            return f"Shodan API error: {e}"
         except Exception as e:
             return f"Error in Shodan integration: {e}"
 
@@ -180,6 +213,8 @@ class UltimateAdvancedWebScanner:
             return f"Error in anomaly detection: {e}"
 
     def machine_learning_based_detection(self):
+        if not SKLEARN_AVAILABLE:
+            return "Error: scikit-learn not available. Install with: pip install scikit-learn"
         try:
             response = requests.get(self.target, verify=False)
             text = response.text
@@ -221,6 +256,8 @@ class UltimateAdvancedWebScanner:
             return f"Error in SSRF testing: {e}"
 
     def protocol_level_testing(self):
+        if not SCAPY_AVAILABLE:
+            return "Error: scapy not available. Install with: pip install scapy"
         try:
             pkt = IP(dst=self.target) / TCP(dport=80, flags="S")
             response = sr1(pkt, timeout=2, verbose=False)

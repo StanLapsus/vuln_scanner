@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vuln Scanner - Advanced Web Security Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>Vuln Scanner</h1>
+                </div>
+                <p class="subtitle">Advanced Web Security Scanner</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="scan-form">
+                <h2><i class="fas fa-search"></i> Start Security Scan</h2>
+                <form id="scanForm">
+                    <div class="input-group">
+                        <label for="target">Target URL</label>
+                        <input type="url" id="target" name="target" placeholder="https://example.com" required>
+                        <small>Enter the website URL you want to scan for vulnerabilities</small>
+                    </div>
+                    <button type="submit" id="scanBtn" class="scan-btn">
+                        <i class="fas fa-play"></i>
+                        Start Scan
+                    </button>
+                </form>
+            </div>
+
+            <div class="progress-section" id="progressSection" style="display: none;">
+                <h3><i class="fas fa-cog fa-spin"></i> Scanning in Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="progress-text" id="progressText">Initializing scan...</p>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h3><i class="fas fa-chart-line"></i> Scan Results</h3>
+                    <button id="exportBtn" class="export-btn">
+                        <i class="fas fa-download"></i> Export JSON
+                    </button>
+                </div>
+                <div class="results-grid" id="resultsGrid">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+
+            <div class="features-section">
+                <h3><i class="fas fa-star"></i> Scanner Features</h3>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <i class="fas fa-network-wired"></i>
+                        <h4>Port Scanning</h4>
+                        <p>Advanced nmap-based port scanning with service detection</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-sitemap"></i>
+                        <h4>Subdomain Discovery</h4>
+                        <p>Comprehensive subdomain enumeration from multiple sources</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-folder-open"></i>
+                        <h4>Content Discovery</h4>
+                        <p>Hidden directory and file discovery</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-shield-virus"></i>
+                        <h4>XSS Testing</h4>
+                        <p>Cross-site scripting vulnerability detection</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-terminal"></i>
+                        <h4>Command Injection</h4>
+                        <p>Command injection vulnerability testing</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-cogs"></i>
+                        <h4>CMS Detection</h4>
+                        <p>Content management system identification</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-lock"></i>
+                        <h4>Security Headers</h4>
+                        <p>HTTP security headers analysis</p>
+                    </div>
+                    <div class="feature-card">
+                        <i class="fas fa-brain"></i>
+                        <h4>ML Detection</h4>
+                        <p>Machine learning-based anomaly detection</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2024 Vuln Scanner. Advanced web security testing tool.</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
