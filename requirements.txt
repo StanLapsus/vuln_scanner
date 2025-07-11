@@ -1,0 +1,8 @@
+requests>=2.25.0
+python-nmap>=0.7.0
+beautifulsoup4>=4.9.0
+shodan>=1.25.0
+scikit-learn>=1.0.0
+colorama>=0.4.0
+scapy>=2.4.0
+Flask>=2.0.0
