@@ -8,9 +8,11 @@ class VulnScannerApp {
         this.resultsSection = document.getElementById('resultsSection');
         this.resultsGrid = document.getElementById('resultsGrid');
         this.exportBtn = document.getElementById('exportBtn');
+        this.targetInput = document.getElementById('target');
         
         this.currentResults = null;
         this.pollInterval = null;
+        this.isScanning = false;
         
         this.init();
     }
@@ -18,32 +20,195 @@ class VulnScannerApp {
     init() {
         this.scanForm.addEventListener('submit', this.handleScanSubmit.bind(this));
         this.exportBtn.addEventListener('click', this.handleExport.bind(this));
+        this.targetInput.addEventListener('input', this.handleInputChange.bind(this));
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', this.handleKeyboardShortcuts.bind(this));
+        
+        // Initialize tooltips and enhance UI
+        this.enhanceUI();
+    }
+    
+    enhanceUI() {
+        // Add input validation styling
+        this.targetInput.addEventListener('blur', this.validateUrl.bind(this));
+        
+        // Add loading states
+        this.addLoadingStates();
+        
+        // Enhance button interactions
+        this.enhanceButtons();
+    }
+    
+    addLoadingStates() {
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                if (!button.disabled) {
+                    button.classList.add('loading');
+                    setTimeout(() => button.classList.remove('loading'), 200);
+                }
+            });
+        });
+    }
+    
+    enhanceButtons() {
+        // Add ripple effect to buttons
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+            button.addEventListener('click', this.createRipple.bind(this));
+        });
+    }
+    
+    createRipple(e) {
+        const button = e.currentTarget;
+        const rect = button.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        
+        const ripple = document.createElement('span');
+        ripple.style.cssText = `
+            position: absolute;
+            width: ${size}px;
+            height: ${size}px;
+            left: ${x}px;
+            top: ${y}px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: scale(0);
+            animation: ripple 0.6s ease-out;
+        `;
+        
+        // Add CSS animation if not already present
+        if (!document.querySelector('#ripple-style')) {
+            const style = document.createElement('style');
+            style.id = 'ripple-style';
+            style.textContent = `
+                @keyframes ripple {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        button.style.position = 'relative';
+        button.style.overflow = 'hidden';
+        button.appendChild(ripple);
+        
+        setTimeout(() => {
+            ripple.remove();
+        }, 600);
+    }
+    
+    handleKeyboardShortcuts(e) {
+        // Ctrl+Enter to start scan
+        if (e.ctrlKey && e.key === 'Enter' && !this.isScanning) {
+            e.preventDefault();
+            this.scanForm.dispatchEvent(new Event('submit'));
+        }
+        
+        // Escape to cancel/reset
+        if (e.key === 'Escape' && this.isScanning) {
+            this.cancelScan();
+        }
+    }
+    
+    handleInputChange(e) {
+        const input = e.target;
+        this.clearInputError(input);
+        
+        // Real-time URL validation
+        if (input.value && !this.isValidUrl(input.value)) {
+            this.showInputError(input, 'Please enter a valid URL');
+        }
+    }
+    
+    validateUrl(e) {
+        const input = e.target;
+        const url = input.value.trim();
+        
+        if (url && !this.isValidUrl(url)) {
+            this.showInputError(input, 'Please enter a valid URL (e.g., https://example.com)');
+            return false;
+        }
+        
+        this.clearInputError(input);
+        return true;
+    }
+    
+    isValidUrl(string) {
+        try {
+            const url = new URL(string);
+            return url.protocol === 'http:' || url.protocol === 'https:';
+        } catch (_) {
+            return false;
+        }
+    }
+    
+    showInputError(input, message) {
+        this.clearInputError(input);
+        
+        input.classList.add('error');
+        const errorElement = document.createElement('div');
+        errorElement.className = 'input-error';
+        errorElement.textContent = message;
+        errorElement.setAttribute('role', 'alert');
+        
+        input.parentNode.appendChild(errorElement);
+    }
+    
+    clearInputError(input) {
+        input.classList.remove('error');
+        const errorElement = input.parentNode.querySelector('.input-error');
+        if (errorElement) {
+            errorElement.remove();
+        }
     }
     
     async handleScanSubmit(e) {
         e.preventDefault();
         
+        if (this.isScanning) {
+            return;
+        }
+        
         const formData = new FormData(this.scanForm);
-        const target = formData.get('target');
+        const target = formData.get('target').trim();
         
         if (!target) {
-            this.showError('Please enter a target URL');
+            this.showNotification('Please enter a target URL', 'error');
+            this.targetInput.focus();
+            return;
+        }
+        
+        if (!this.validateUrl({ target: { value: target } })) {
+            this.targetInput.focus();
             return;
         }
         
         try {
-            this.startScan(target);
+            await this.startScan(target);
         } catch (error) {
-            this.showError('Error starting scan: ' + error.message);
+            this.showNotification('Error starting scan: ' + error.message, 'error');
         }
     }
     
     async startScan(target) {
+        this.isScanning = true;
+        
         // Update UI
         this.scanBtn.disabled = true;
-        this.scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+        this.scanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Starting...</span>';
         this.progressSection.style.display = 'block';
         this.resultsSection.style.display = 'none';
+        
+        // Update progress bar attributes
+        this.updateProgressBar(0);
         
         try {
             const response = await fetch('/api/scan', {
@@ -55,14 +220,17 @@ class VulnScannerApp {
             });
             
             if (!response.ok) {
-                throw new Error('Failed to start scan');
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+            
+            const data = await response.json();
+            this.showNotification('Scan started successfully', 'success');
             
             // Start polling for status
             this.pollScanStatus();
             
         } catch (error) {
-            this.showError('Error starting scan: ' + error.message);
+            this.showNotification('Error starting scan: ' + error.message, 'error');
             this.resetUI();
         }
     }
@@ -71,8 +239,11 @@ class VulnScannerApp {
         this.pollInterval = setInterval(async () => {
             try {
                 const response = await fetch('/api/scan_status');
-                const status = await response.json();
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
                 
+                const status = await response.json();
                 this.updateProgress(status);
                 
                 if (status.status === 'complete') {
@@ -80,29 +251,39 @@ class VulnScannerApp {
                     this.handleScanComplete(status);
                 } else if (status.status === 'error') {
                     clearInterval(this.pollInterval);
-                    this.showError('Scan error: ' + status.error);
+                    this.showNotification('Scan error: ' + status.error, 'error');
                     this.resetUI();
                 }
                 
             } catch (error) {
                 console.error('Error polling scan status:', error);
+                this.showNotification('Connection error during scan', 'error');
             }
         }, 1000);
     }
     
     updateProgress(status) {
-        const progress = status.progress || 0;
-        this.progressFill.style.width = progress + '%';
+        const progress = Math.max(0, Math.min(100, status.progress || 0));
+        this.updateProgressBar(progress);
         
         if (status.status === 'running') {
-            if (progress < 50) {
+            if (progress < 25) {
                 this.progressText.textContent = 'Initializing security tests...';
+            } else if (progress < 50) {
+                this.progressText.textContent = 'Scanning network services...';
+            } else if (progress < 75) {
+                this.progressText.textContent = 'Testing for vulnerabilities...';
             } else {
-                this.progressText.textContent = 'Running vulnerability scans...';
+                this.progressText.textContent = 'Analyzing results...';
             }
         } else if (status.status === 'complete') {
             this.progressText.textContent = 'Scan completed successfully!';
         }
+    }
+    
+    updateProgressBar(progress) {
+        this.progressFill.style.width = progress + '%';
+        this.progressSection.querySelector('.progress-bar').setAttribute('aria-valuenow', progress);
     }
     
     handleScanComplete(status) {
@@ -110,8 +291,10 @@ class VulnScannerApp {
         this.displayResults(status.results);
         this.resetUI();
         
-        // Show success message
-        this.progressText.textContent = `Scan completed! Results saved to ${status.filename}`;
+        // Show success notification
+        this.showNotification(`Scan completed! Results saved to ${status.filename}`, 'success');
+        
+        // Auto-hide progress section after delay
         setTimeout(() => {
             this.progressSection.style.display = 'none';
         }, 3000);
@@ -119,6 +302,11 @@ class VulnScannerApp {
     
     displayResults(results) {
         this.resultsGrid.innerHTML = '';
+        
+        if (!results || Object.keys(results).length === 0) {
+            this.showEmptyResults();
+            return;
+        }
         
         for (const [testName, result] of Object.entries(results)) {
             const resultElement = this.createResultElement(testName, result);
@@ -129,9 +317,22 @@ class VulnScannerApp {
         this.resultsSection.scrollIntoView({ behavior: 'smooth' });
     }
     
+    showEmptyResults() {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-results';
+        emptyDiv.innerHTML = `
+            <i class="fas fa-search" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <p>No scan results available</p>
+        `;
+        this.resultsGrid.appendChild(emptyDiv);
+        this.resultsSection.style.display = 'block';
+    }
+    
     createResultElement(testName, result) {
         const div = document.createElement('div');
         div.className = 'result-item';
+        div.setAttribute('tabindex', '0');
+        div.setAttribute('role', 'article');
         
         const status = this.getResultStatus(result);
         const formattedResult = this.formatResult(result);
@@ -139,10 +340,15 @@ class VulnScannerApp {
         div.innerHTML = `
             <div class="result-header">
                 <div class="result-title">${this.formatTestName(testName)}</div>
-                <div class="result-status ${status.class}">${status.text}</div>
+                <div class="result-status ${status.class}" role="status">${status.text}</div>
             </div>
             <div class="result-content">${formattedResult}</div>
         `;
+        
+        // Add click handler for expansion
+        div.addEventListener('click', () => {
+            div.classList.toggle('expanded');
+        });
         
         return div;
     }
@@ -154,9 +360,9 @@ class VulnScannerApp {
     getResultStatus(result) {
         const resultStr = String(result).toLowerCase();
         
-        if (resultStr.includes('error') || resultStr.includes('failed')) {
+        if (resultStr.includes('error') || resultStr.includes('failed') || resultStr.includes('not available')) {
             return { class: 'status-error', text: 'Error' };
-        } else if (resultStr.includes('vulnerability') || resultStr.includes('found') || resultStr.includes('detected')) {
+        } else if (resultStr.includes('vulnerability') || resultStr.includes('found') || resultStr.includes('detected') || resultStr.includes('potential')) {
             return { class: 'status-warning', text: 'Found' };
         } else {
             return { class: 'status-success', text: 'Complete' };
@@ -164,43 +370,108 @@ class VulnScannerApp {
     }
     
     formatResult(result) {
-        if (typeof result === 'object') {
-            return JSON.stringify(result, null, 2);
-        } else if (Array.isArray(result)) {
-            return result.length > 0 ? result.join('\n') : 'No items found';
+        if (typeof result === 'object' && result !== null) {
+            if (Array.isArray(result)) {
+                return result.length > 0 ? result.join('\n') : 'No items found';
+            } else {
+                return JSON.stringify(result, null, 2);
+            }
         } else {
-            return String(result);
+            return String(result || 'No data available');
         }
     }
     
     handleExport() {
         if (!this.currentResults) {
-            this.showError('No scan results to export');
+            this.showNotification('No scan results to export', 'warning');
             return;
         }
         
-        const dataStr = JSON.stringify(this.currentResults, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
+        try {
+            const dataStr = JSON.stringify(this.currentResults, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `scan_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            URL.revokeObjectURL(url);
+            this.showNotification('Results exported successfully', 'success');
+        } catch (error) {
+            this.showNotification('Error exporting results: ' + error.message, 'error');
+        }
+    }
+    
+    cancelScan() {
+        if (this.pollInterval) {
+            clearInterval(this.pollInterval);
+            this.pollInterval = null;
+        }
         
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `scan_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        URL.revokeObjectURL(url);
+        this.isScanning = false;
+        this.resetUI();
+        this.showNotification('Scan cancelled', 'info');
     }
     
     resetUI() {
+        this.isScanning = false;
         this.scanBtn.disabled = false;
-        this.scanBtn.innerHTML = '<i class="fas fa-play"></i> Start Scan';
+        this.scanBtn.innerHTML = '<i class="fas fa-play"></i> <span>Start Scan</span>';
     }
     
-    showError(message) {
-        // Simple error display - you could enhance this with a proper notification system
-        alert(message);
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.setAttribute('role', 'alert');
+        notification.setAttribute('aria-live', 'polite');
+        
+        const icon = this.getNotificationIcon(type);
+        notification.innerHTML = `
+            <i class="${icon}"></i>
+            <span>${message}</span>
+            <button class="notification-close" aria-label="Close notification">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add to container
+        let container = document.querySelector('.notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'notification-container';
+            document.body.appendChild(container);
+        }
+        
+        container.appendChild(notification);
+        
+        // Auto-remove after delay
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+        
+        // Add close button handler
+        notification.querySelector('.notification-close').addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+    
+    getNotificationIcon(type) {
+        switch (type) {
+            case 'success': return 'fas fa-check-circle';
+            case 'error': return 'fas fa-exclamation-circle';
+            case 'warning': return 'fas fa-exclamation-triangle';
+            case 'info': return 'fas fa-info-circle';
+            default: return 'fas fa-info-circle';
+        }
     }
 }
 
