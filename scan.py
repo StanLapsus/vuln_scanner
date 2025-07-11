@@ -45,7 +45,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 init(autoreset=True)
 
 import asyncio
-from advanced_scanner import AdvancedWebScanner
 
 class UltimateAdvancedWebScanner:
     def __init__(self, target, threads=20):
@@ -53,22 +52,9 @@ class UltimateAdvancedWebScanner:
         self.threads = threads
 
     async def scan_website(self):
-        """Run comprehensive scan using both legacy and advanced methods"""
-        results = {}
-        
-        # Run legacy scans for compatibility
-        legacy_results = self.run_legacy_scans()
-        results.update(legacy_results)
-        
-        # Run advanced scans
-        try:
-            advanced_scanner = AdvancedWebScanner(self.target, max_workers=self.threads)
-            advanced_results = await advanced_scanner.run_comprehensive_scan()
-            results.update(advanced_results)
-        except Exception as e:
-            results['advanced_scan_error'] = f"Error running advanced scan: {str(e)}"
-        
-        return results
+        """Run comprehensive legacy scan"""
+        # Run legacy scans only (the advanced scanner has been removed)
+        return self.run_legacy_scans()
 
     def run_legacy_scans(self):
         """Run legacy scanning methods"""
@@ -348,19 +334,9 @@ def print_colored_results(results):
             print(colored_text(result, Fore.YELLOW))
 
 def main():
-    target_website = input(Fore.GREEN + "Enter the website URL to scan: " + Style.RESET_ALL)
-    try:
-        scanner = UltimateAdvancedWebScanner(target_website)
-        results = scanner.scan_website()
-
-        print(Fore.MAGENTA + "\nScan Results:" + Style.RESET_ALL)
-        print_colored_results(results)
-
-        file_name = save_results_to_file(results)
-        print(Fore.GREEN + f"\nResults saved to {file_name}" + Style.RESET_ALL)
-
-    except Exception as e:
-        print(Fore.RED + f"An error occurred: {e}" + Style.RESET_ALL)
+    """This function is kept for backward compatibility but CLI mode is deprecated"""
+    print("CLI mode is deprecated. Please use the web interface.")
+    print("Run: python3 start.py")
 
 if __name__ == "__main__":
     main()
