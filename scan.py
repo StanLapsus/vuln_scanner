@@ -44,10 +44,47 @@ except ImportError:
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 init(autoreset=True)
 
+import asyncio
+from advanced_scanner import AdvancedWebScanner
+
 class UltimateAdvancedWebScanner:
     def __init__(self, target, threads=20):
         self.target = target
         self.threads = threads
+
+    async def scan_website(self):
+        """Run comprehensive scan using both legacy and advanced methods"""
+        results = {}
+        
+        # Run legacy scans for compatibility
+        legacy_results = self.run_legacy_scans()
+        results.update(legacy_results)
+        
+        # Run advanced scans
+        try:
+            advanced_scanner = AdvancedWebScanner(self.target, max_workers=self.threads)
+            advanced_results = await advanced_scanner.run_comprehensive_scan()
+            results.update(advanced_results)
+        except Exception as e:
+            results['advanced_scan_error'] = f"Error running advanced scan: {str(e)}"
+        
+        return results
+
+    def run_legacy_scans(self):
+        """Run legacy scanning methods"""
+        results = {}
+        
+        # Keep existing scanning methods for backward compatibility
+        results['advanced_port_scan'] = self.advanced_port_scan()
+        results['subdomain_enumeration'] = self.subdomain_enumeration()
+        results['advanced_content_discovery'] = self.advanced_content_discovery()
+        results['security_headers_analysis'] = self.security_headers_analysis()
+        results['cms_detection'] = self.cms_detection()
+        results['misconfiguration_detection'] = self.misconfiguration_detection()
+        results['dns_lookup'] = self.dns_lookup()
+        results['whois_lookup'] = self.whois_lookup()
+        
+        return results
 
     def advanced_port_scan(self):
         if not NMAP_AVAILABLE:

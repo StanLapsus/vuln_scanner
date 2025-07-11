@@ -68,9 +68,24 @@ class ScanHandler(http.server.SimpleHTTPRequestHandler):
                     scanner = UltimateAdvancedWebScanner(target)
                     
                     # Update progress
+                    self.server.scan_status = {'status': 'running', 'progress': 25}
+                    
+                    # Run async scan
+                    import asyncio
+                    
+                    # Create new event loop for thread
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
                     self.server.scan_status = {'status': 'running', 'progress': 50}
                     
-                    results = scanner.scan_website()
+                    try:
+                        results = loop.run_until_complete(scanner.scan_website())
+                    finally:
+                        loop.close()
+                    
+                    self.server.scan_status = {'status': 'running', 'progress': 90}
+                    
                     filename = save_results_to_file(results)
                     
                     self.server.scan_status = {

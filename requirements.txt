@@ -6,3 +6,5 @@ scikit-learn>=1.0.0
 colorama>=0.4.0
 scapy>=2.4.0
 Flask>=2.0.0
+playwright>=1.40.0
+selenium>=4.0.0
