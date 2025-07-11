@@ -59,11 +59,18 @@
             <section class="results-section" id="resultsSection" style="display: none;" aria-labelledby="results-heading">
                 <div class="results-header">
                     <h3 id="results-heading"><i class="fas fa-chart-line" aria-hidden="true"></i> Scan Results</h3>
-                    <button id="exportBtn" class="export-btn" aria-describedby="export-help">
-                        <i class="fas fa-download" aria-hidden="true"></i> 
-                        <span>Export JSON</span>
-                        <span class="sr-only" id="export-help">Download scan results as JSON file</span>
-                    </button>
+                    <div class="results-actions">
+                        <button id="generateReportBtn" class="generate-report-btn" aria-describedby="report-help">
+                            <i class="fas fa-file-alt" aria-hidden="true"></i> 
+                            <span>Generate Report</span>
+                            <span class="sr-only" id="report-help">Generate comprehensive HTML report</span>
+                        </button>
+                        <button id="exportBtn" class="export-btn" aria-describedby="export-help">
+                            <i class="fas fa-download" aria-hidden="true"></i> 
+                            <span>Export JSON</span>
+                            <span class="sr-only" id="export-help">Download scan results as JSON file</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="results-grid" id="resultsGrid" role="region" aria-label="Scan results">
                     <!-- Results will be populated here -->

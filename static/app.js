@@ -8,6 +8,7 @@ class VulnScannerApp {
         this.resultsSection = document.getElementById('resultsSection');
         this.resultsGrid = document.getElementById('resultsGrid');
         this.exportBtn = document.getElementById('exportBtn');
+        this.generateReportBtn = document.getElementById('generateReportBtn');
         this.targetInput = document.getElementById('target');
         
         this.currentResults = null;
@@ -20,6 +21,7 @@ class VulnScannerApp {
     init() {
         this.scanForm.addEventListener('submit', this.handleScanSubmit.bind(this));
         this.exportBtn.addEventListener('click', this.handleExport.bind(this));
+        this.generateReportBtn.addEventListener('click', this.handleGenerateReport.bind(this));
         this.targetInput.addEventListener('input', this.handleInputChange.bind(this));
         
         // Add keyboard shortcuts
@@ -405,6 +407,62 @@ class VulnScannerApp {
             this.showNotification('Results exported successfully', 'success');
         } catch (error) {
             this.showNotification('Error exporting results: ' + error.message, 'error');
+        }
+    }
+    
+    async handleGenerateReport() {
+        if (!this.currentResults) {
+            this.showNotification('No scan results available for report generation', 'warning');
+            return;
+        }
+        
+        try {
+            this.generateReportBtn.disabled = true;
+            this.generateReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Generating...</span>';
+            
+            const response = await fetch('/api/generate_report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    results: this.currentResults,
+                    format: 'html'
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showNotification('Report generated successfully!', 'success');
+                
+                // Create download link
+                const reportFilename = result.report_path.split('/').pop();
+                const downloadUrl = `/api/download_report/${reportFilename}`;
+                
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = reportFilename;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                this.showNotification('Report download started', 'info');
+            } else {
+                throw new Error(result.error || 'Failed to generate report');
+            }
+            
+        } catch (error) {
+            this.showNotification('Error generating report: ' + error.message, 'error');
+        } finally {
+            this.generateReportBtn.disabled = false;
+            this.generateReportBtn.innerHTML = '<i class="fas fa-file-alt"></i> <span>Generate Report</span>';
         }
     }
     
