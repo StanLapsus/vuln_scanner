@@ -311,9 +311,29 @@ class VulnScannerApp {
             return;
         }
         
-        for (const [testName, result] of Object.entries(results)) {
-            const resultElement = this.createResultElement(testName, result);
-            this.resultsGrid.appendChild(resultElement);
+        // Create summary dashboard first
+        const summaryElement = this.createSummaryDashboard(results);
+        this.resultsGrid.appendChild(summaryElement);
+        
+        // Parse and display vulnerabilities
+        const vulnerabilities = this.parseVulnerabilities(results);
+        if (vulnerabilities.length > 0) {
+            const vulnSection = this.createVulnerabilitySection(vulnerabilities);
+            this.resultsGrid.appendChild(vulnSection);
+        }
+        
+        // Display security findings
+        const securityFindings = this.parseSecurityFindings(results);
+        if (securityFindings.length > 0) {
+            const securitySection = this.createSecurityFindingsSection(securityFindings);
+            this.resultsGrid.appendChild(securitySection);
+        }
+        
+        // Display technical details in collapsible sections
+        const technicalDetails = this.parseTechnicalDetails(results);
+        if (technicalDetails.length > 0) {
+            const techSection = this.createTechnicalDetailsSection(technicalDetails);
+            this.resultsGrid.appendChild(techSection);
         }
         
         this.resultsSection.style.display = 'block';
@@ -331,29 +351,287 @@ class VulnScannerApp {
         this.resultsSection.style.display = 'block';
     }
     
-    createResultElement(testName, result) {
-        const div = document.createElement('div');
-        div.className = 'result-item';
-        div.setAttribute('tabindex', '0');
-        div.setAttribute('role', 'article');
+    
+    createSummaryDashboard(results) {
+        const summary = results.summary || {};
+        const scanInfo = {
+            target: results.target || 'Unknown',
+            duration: results.duration || 0,
+            totalTests: summary.total_tests || 0,
+            vulnerabilities: summary.vulnerabilities_found || 0
+        };
         
-        const status = this.getResultStatus(result);
-        const formattedResult = this.formatResult(result);
-        
-        div.innerHTML = `
-            <div class="result-header">
-                <div class="result-title">${this.formatTestName(testName)}</div>
-                <div class="result-status ${status.class}" role="status">${status.text}</div>
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'summary-dashboard';
+        summaryDiv.innerHTML = `
+            <h3><i class="fas fa-chart-bar"></i> Scan Summary</h3>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-value">${scanInfo.target}</div>
+                    <div class="summary-label">Target</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${scanInfo.totalTests}</div>
+                    <div class="summary-label">Tests Run</div>
+                </div>
+                <div class="summary-card ${scanInfo.vulnerabilities > 0 ? 'has-vulns' : ''}">
+                    <div class="summary-value">${scanInfo.vulnerabilities}</div>
+                    <div class="summary-label">Vulnerabilities</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${(scanInfo.duration * 1000).toFixed(0)}ms</div>
+                    <div class="summary-label">Duration</div>
+                </div>
             </div>
-            <div class="result-content">${formattedResult}</div>
         `;
         
-        // Add click handler for expansion
-        div.addEventListener('click', () => {
-            div.classList.toggle('expanded');
+        return summaryDiv;
+    }
+    
+    parseVulnerabilities(results) {
+        const vulnerabilities = [];
+        
+        // Parse vulnerabilities from tests
+        if (results.tests && typeof results.tests === 'object') {
+            const testsData = typeof results.tests === 'string' 
+                ? JSON.parse(results.tests) 
+                : results.tests;
+            
+            // Check vulnerability_scan results
+            if (testsData.vulnerability_scan && testsData.vulnerability_scan.details) {
+                const vulnData = testsData.vulnerability_scan.details;
+                if (vulnData.vulnerabilities && Array.isArray(vulnData.vulnerabilities)) {
+                    vulnData.vulnerabilities.forEach(vuln => {
+                        vulnerabilities.push({
+                            type: vuln.type || 'Unknown',
+                            severity: vuln.severity || 'Low',
+                            description: vuln.description || 'No description available',
+                            category: 'Vulnerability',
+                            timestamp: testsData.vulnerability_scan.timestamp
+                        });
+                    });
+                }
+            }
+            
+            // Check security headers for missing/weak configurations
+            if (testsData.security_headers && testsData.security_headers.details) {
+                const headers = testsData.security_headers.details.headers || {};
+                Object.keys(headers).forEach(headerName => {
+                    const header = headers[headerName];
+                    if (!header.present || header.recommendation.includes('Consider implementing')) {
+                        vulnerabilities.push({
+                            type: 'Missing Security Header',
+                            severity: 'Medium',
+                            description: `${headerName}: ${header.recommendation}`,
+                            category: 'Security Configuration',
+                            timestamp: testsData.security_headers.timestamp
+                        });
+                    }
+                });
+            }
+        }
+        
+        return vulnerabilities;
+    }
+    
+    parseSecurityFindings(results) {
+        const findings = [];
+        
+        if (results.tests && typeof results.tests === 'object') {
+            const testsData = typeof results.tests === 'string' 
+                ? JSON.parse(results.tests) 
+                : results.tests;
+            
+            // Port scan findings
+            if (testsData.port_scan && testsData.port_scan.details) {
+                const portData = testsData.port_scan.details;
+                if (portData.open_ports && Array.isArray(portData.open_ports)) {
+                    findings.push({
+                        type: 'Open Ports',
+                        category: 'Network Security',
+                        severity: 'Info',
+                        details: portData.open_ports,
+                        count: portData.open_ports.length,
+                        timestamp: testsData.port_scan.timestamp
+                    });
+                }
+            }
+            
+            // Information disclosure findings
+            if (testsData.information_disclosure && testsData.information_disclosure.details) {
+                const infoData = testsData.information_disclosure.details;
+                if (infoData.accessible_paths && Array.isArray(infoData.accessible_paths)) {
+                    findings.push({
+                        type: 'Information Disclosure',
+                        category: 'Information Leakage',
+                        severity: 'Low',
+                        details: infoData.accessible_paths,
+                        count: infoData.sensitive_files_found || 0,
+                        timestamp: testsData.information_disclosure.timestamp
+                    });
+                }
+            }
+            
+            // Technology detection findings
+            if (testsData.technology_detection && testsData.technology_detection.details) {
+                const techData = testsData.technology_detection.details;
+                findings.push({
+                    type: 'Technology Stack',
+                    category: 'Reconnaissance',
+                    severity: 'Info',
+                    details: {
+                        server: techData.server,
+                        cms: techData.cms_detected,
+                        technologies: techData.technologies
+                    },
+                    timestamp: testsData.technology_detection.timestamp
+                });
+            }
+        }
+        
+        return findings;
+    }
+    
+    parseTechnicalDetails(results) {
+        const details = [];
+        
+        if (results.tests && typeof results.tests === 'object') {
+            const testsData = typeof results.tests === 'string' 
+                ? JSON.parse(results.tests) 
+                : results.tests;
+            
+            // Connectivity details
+            if (testsData.connectivity && testsData.connectivity.details) {
+                details.push({
+                    name: 'Connectivity Test',
+                    status: testsData.connectivity.status,
+                    data: testsData.connectivity.details,
+                    timestamp: testsData.connectivity.timestamp
+                });
+            }
+            
+            // SSL Analysis details
+            if (testsData.ssl_analysis && testsData.ssl_analysis.details) {
+                details.push({
+                    name: 'SSL/TLS Analysis',
+                    status: testsData.ssl_analysis.status,
+                    data: testsData.ssl_analysis.details,
+                    timestamp: testsData.ssl_analysis.timestamp
+                });
+            }
+        }
+        
+        return details;
+    }
+    
+    createVulnerabilitySection(vulnerabilities) {
+        const section = document.createElement('div');
+        section.className = 'vulnerability-section';
+        
+        let vulnCards = '';
+        vulnerabilities.forEach(vuln => {
+            const severityClass = vuln.severity.toLowerCase();
+            vulnCards += `
+                <div class="vulnerability-card ${severityClass}">
+                    <div class="vuln-header">
+                        <div class="vuln-type">${vuln.type}</div>
+                        <div class="vuln-severity ${severityClass}">${vuln.severity}</div>
+                    </div>
+                    <div class="vuln-description">${vuln.description}</div>
+                    <div class="vuln-meta">
+                        <span class="vuln-category">${vuln.category}</span>
+                        <span class="vuln-timestamp">${new Date(vuln.timestamp).toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
         });
         
-        return div;
+        section.innerHTML = `
+            <h3><i class="fas fa-exclamation-triangle"></i> Vulnerabilities Found (${vulnerabilities.length})</h3>
+            <div class="vulnerability-grid">
+                ${vulnCards}
+            </div>
+        `;
+        
+        return section;
+    }
+    
+    createSecurityFindingsSection(findings) {
+        const section = document.createElement('div');
+        section.className = 'security-findings-section';
+        
+        let findingCards = '';
+        findings.forEach(finding => {
+            const severityClass = finding.severity.toLowerCase();
+            findingCards += `
+                <div class="finding-card ${severityClass}">
+                    <div class="finding-header">
+                        <div class="finding-type">${finding.type}</div>
+                        <div class="finding-count">${finding.count || 'N/A'}</div>
+                    </div>
+                    <div class="finding-category">${finding.category}</div>
+                    <div class="finding-details">
+                        ${this.formatFindingDetails(finding.details)}
+                    </div>
+                </div>
+            `;
+        });
+        
+        section.innerHTML = `
+            <h3><i class="fas fa-shield-alt"></i> Security Findings (${findings.length})</h3>
+            <div class="findings-grid">
+                ${findingCards}
+            </div>
+        `;
+        
+        return section;
+    }
+    
+    createTechnicalDetailsSection(details) {
+        const section = document.createElement('div');
+        section.className = 'technical-details-section';
+        
+        let detailCards = '';
+        details.forEach(detail => {
+            const statusClass = detail.status === 'success' ? 'success' : 'error';
+            detailCards += `
+                <div class="detail-card collapsible">
+                    <div class="detail-header" onclick="this.parentElement.classList.toggle('expanded')">
+                        <div class="detail-name">${detail.name}</div>
+                        <div class="detail-status ${statusClass}">${detail.status}</div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="detail-content">
+                        <pre>${JSON.stringify(detail.data, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+        });
+        
+        section.innerHTML = `
+            <h3><i class="fas fa-cog"></i> Technical Details</h3>
+            <div class="details-grid">
+                ${detailCards}
+            </div>
+        `;
+        
+        return section;
+    }
+    
+    formatFindingDetails(details) {
+        if (Array.isArray(details)) {
+            return details.map(item => {
+                if (typeof item === 'object') {
+                    return `<div class="detail-item">${JSON.stringify(item, null, 2)}</div>`;
+                } else {
+                    return `<div class="detail-item">${item}</div>`;
+                }
+            }).join('');
+        } else if (typeof details === 'object') {
+            return `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+        } else {
+            return `<div class="detail-item">${details}</div>`;
+        }
     }
     
     formatTestName(testName) {
