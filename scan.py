@@ -1,317 +1,329 @@
-try:
-    from scapy.all import TCP, IP, sr1
-    SCAPY_AVAILABLE = True
-except ImportError:
-    SCAPY_AVAILABLE = False
+#!/usr/bin/env python3
 
-import concurrent.futures
-import requests
-import socket
-import os
-import json
-import time
-import re
-import subprocess
-import urllib3
-from colorama import Fore, Style, init
-
-# Optional imports
-try:
-    import nmap
-    NMAP_AVAILABLE = True
-except ImportError:
-    NMAP_AVAILABLE = False
-
-try:
-    import shodan
-    SHODAN_AVAILABLE = True
-except ImportError:
-    SHODAN_AVAILABLE = False
-
-try:
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.cluster import KMeans
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
-
-try:
-    from bs4 import BeautifulSoup
-    BS4_AVAILABLE = True
-except ImportError:
-    BS4_AVAILABLE = False
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-init(autoreset=True)
+"""
+Production-Ready Vulnerability Scanner
+Enhanced with sophisticated methods and real-time capabilities
+"""
 
 import asyncio
+import json
+import logging
+import os
+import time
+from datetime import datetime
+from enhanced_scanner import EnhancedVulnerabilityScanner
+from demo_mode import is_demo_mode_needed, generate_demo_scan_results
+import urllib3
 
-class UltimateAdvancedWebScanner:
-    def __init__(self, target, threads=20):
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+class ProductionVulnerabilityScanner:
+    """Production-ready vulnerability scanner with enhanced capabilities"""
+    
+    def __init__(self, target, threads=10):
         self.target = target
         self.threads = threads
-
+        self.scanner = None
+        self.scan_results = {}
+        self.progress_data = {'progress': 0, 'message': 'Initializing...'}
+        self.demo_mode = is_demo_mode_needed(target)
+        
+        logger.info(f"Scanner initialized for {target} (Demo mode: {self.demo_mode})")
+        
+    def set_progress_callback(self, callback):
+        """Set progress callback for real-time updates"""
+        self.progress_callback = callback
+        
+    def update_progress(self, progress, message):
+        """Update scan progress"""
+        self.progress_data = {'progress': progress, 'message': message}
+        if hasattr(self, 'progress_callback'):
+            self.progress_callback(progress, message)
+    
     async def scan_website(self):
-        """Run comprehensive legacy scan"""
-        # Run legacy scans only (the advanced scanner has been removed)
-        return self.run_legacy_scans()
-
+        """Run comprehensive security scan"""
+        try:
+            if self.demo_mode:
+                logger.info(f"Using demo mode for {self.target}")
+                return await self._run_demo_scan()
+            else:
+                logger.info(f"Using live scanner for {self.target}")
+                return await self._run_live_scan()
+                
+        except Exception as e:
+            logger.error(f"Scan failed: {e}")
+            error_result = {
+                'error': str(e),
+                'timestamp': datetime.now().isoformat(),
+                'target': self.target
+            }
+            return error_result
+    
+    async def _run_demo_scan(self):
+        """Run demo scan with simulated progress"""
+        self.update_progress(10, "Initializing demo scan...")
+        await asyncio.sleep(1)
+        
+        self.update_progress(30, "Simulating network tests...")
+        await asyncio.sleep(1)
+        
+        self.update_progress(60, "Generating realistic test data...")
+        await asyncio.sleep(1)
+        
+        self.update_progress(90, "Finalizing demo results...")
+        await asyncio.sleep(0.5)
+        
+        # Generate demo results
+        results = generate_demo_scan_results(self.target)
+        
+        self.update_progress(100, "Demo scan completed")
+        self.scan_results = results
+        return results
+    
+    async def _run_live_scan(self):
+        """Run live scan with enhanced scanner"""
+        # Initialize enhanced scanner
+        self.scanner = EnhancedVulnerabilityScanner(
+            self.target, 
+            max_workers=self.threads,
+            timeout=30
+        )
+        
+        # Set progress callback
+        self.scanner.set_progress_callback(self.update_progress)
+        
+        # Run comprehensive scan
+        logger.info(f"Starting live scan for {self.target}")
+        results = await self.scanner.run_comprehensive_scan()
+        
+        # Store results
+        self.scan_results = results
+        return results
+    
     def run_legacy_scans(self):
-        """Run legacy scanning methods"""
-        results = {}
-        
-        # Keep existing scanning methods for backward compatibility
-        results['advanced_port_scan'] = self.advanced_port_scan()
-        results['subdomain_enumeration'] = self.subdomain_enumeration()
-        results['advanced_content_discovery'] = self.advanced_content_discovery()
-        results['security_headers_analysis'] = self.security_headers_analysis()
-        results['cms_detection'] = self.cms_detection()
-        results['misconfiguration_detection'] = self.misconfiguration_detection()
-        results['dns_lookup'] = self.dns_lookup()
-        results['whois_lookup'] = self.whois_lookup()
-        
-        return results
-
-    def advanced_port_scan(self):
-        if not NMAP_AVAILABLE:
-            return "Error: python-nmap not available. Install with: pip install python-nmap"
+        """Run legacy scanning methods with enhanced error handling"""
         try:
-            scanner = nmap.PortScanner()
-            scanner.scan(self.target, arguments='-sV -sC -O -T4')
-            scan_results = scanner[self.target]
-            return scan_results
-        except Exception as e:
-            return f"Error in advanced port scanning: {e}"
-
-    def subdomain_enumeration(self):
-        subdomains = set()
-        try:
-            sources = [
-                f"https://api.hackertarget.com/hostsearch/?q={self.target}",
-                f"https://crt.sh/?q=%25.{self.target}&output=json",
-                f"https://api.threatminer.org/v2/domain.php?q={self.target}&rt=5"
-            ]
-            for source in sources:
-                response = requests.get(source)
-                if response.status_code == 200:
-                    if 'crt.sh' in source:
-                        crt_data = json.loads(response.text)
-                        subdomains.update([entry['name_value'] for entry in crt_data])
-                    else:
-                        subdomains.update([line.split(',')[0] for line in response.text.splitlines() if ',' in line])
-            return list(subdomains)
-        except Exception as e:
-            return f"Error in subdomain enumeration: {e}"
-
-    def advanced_content_discovery(self):
-        try:
-            # Use a basic wordlist since the common wordlist file may not exist
-            basic_paths = [
-                'admin', 'login', 'wp-admin', 'administrator', 'dashboard',
-                'panel', 'config', 'backup', 'test', 'api', 'uploads',
-                'images', 'js', 'css', 'includes', 'phpmyadmin',
-                '.git', '.env', 'robots.txt', 'sitemap.xml'
-            ]
-            discovered_paths = []
+            # Run the enhanced scanner synchronously
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             
-            for path in basic_paths:
-                try:
-                    url = f"{self.target.rstrip('/')}/{path}"
-                    response = requests.get(url, verify=False, timeout=5)
-                    if response.status_code == 200:
-                        discovered_paths.append(url)
-                except:
-                    continue
-                    
-            return discovered_paths if discovered_paths else "No accessible paths found."
+            try:
+                results = loop.run_until_complete(self.scan_website())
+                return results
+            finally:
+                loop.close()
+                
         except Exception as e:
-            return f"Error in content discovery: {e}"
-
-    def security_headers_analysis(self):
-        try:
-            response = requests.get(self.target, verify=False)
-            security_headers = {
-                "Content-Security-Policy": response.headers.get("Content-Security-Policy", "Missing"),
-                "Strict-Transport-Security": response.headers.get("Strict-Transport-Security", "Missing"),
-                "X-Content-Type-Options": response.headers.get("X-Content-Type-Options", "Missing"),
-                "X-Frame-Options": response.headers.get("X-Frame-Options", "Missing"),
-                "X-XSS-Protection": response.headers.get("X-XSS-Protection", "Missing"),
-                "Referrer-Policy": response.headers.get("Referrer-Policy", "Missing"),
-                "Permissions-Policy": response.headers.get("Permissions-Policy", "Missing")
+            logger.error(f"Legacy scan failed: {e}")
+            return {
+                'error': f"Scan failed: {str(e)}",
+                'timestamp': datetime.now().isoformat(),
+                'target': self.target
             }
-            return security_headers
-        except Exception as e:
-            return f"Error in security headers analysis: {e}"
+    
+    def get_progress(self):
+        """Get current scan progress"""
+        return self.progress_data
+    
+    def generate_report(self, format_type='json'):
+        """Generate scan report"""
+        if self.scan_results:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"security_report_{timestamp}.{format_type}"
+            
+            if format_type == 'json':
+                with open(filename, 'w') as f:
+                    json.dump(self.scan_results, f, indent=2, default=str)
+            elif format_type == 'html':
+                self._generate_html_report(filename)
+            
+            logger.info(f"Report generated: {filename}")
+            return filename
+        else:
+            raise ValueError("No scan results available")
+    
+    def _generate_html_report(self, filename):
+        """Generate HTML report"""
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Security Scan Report - {self.target}</title>
+            <style>
+                body {{ font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+                .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .header h1 {{ margin: 0; font-size: 2.5em; }}
+                .header p {{ margin: 5px 0; opacity: 0.9; }}
+                .summary {{ background: #f8f9fa; padding: 20px; border-bottom: 1px solid #e9ecef; }}
+                .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }}
+                .summary-item {{ text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+                .summary-item h3 {{ margin: 0; font-size: 2em; color: #333; }}
+                .summary-item p {{ margin: 5px 0; color: #666; }}
+                .results {{ padding: 20px; }}
+                .test-result {{ margin: 20px 0; border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden; }}
+                .test-header {{ background: #f8f9fa; padding: 15px; border-bottom: 1px solid #e9ecef; }}
+                .test-header h3 {{ margin: 0; color: #333; }}
+                .test-status {{ display: inline-block; padding: 4px 12px; border-radius: 4px; font-size: 0.9em; font-weight: bold; }}
+                .status-success {{ background: #d4edda; color: #155724; }}
+                .status-error {{ background: #f8d7da; color: #721c24; }}
+                .status-warning {{ background: #fff3cd; color: #856404; }}
+                .test-content {{ padding: 15px; }}
+                .vulnerability {{ background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin: 10px 0; }}
+                .vulnerability-high {{ background: #f8d7da; border-color: #f5c6cb; }}
+                .vulnerability-medium {{ background: #fff3cd; border-color: #ffeaa7; }}
+                .vulnerability-low {{ background: #d1ecf1; border-color: #bee5eb; }}
+                pre {{ background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; border-top: 1px solid #e9ecef; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔍 Security Scan Report</h1>
+                    <p><strong>Target:</strong> {self.target}</p>
+                    <p><strong>Scan ID:</strong> {self.scan_results.get('scan_id', 'Unknown')}</p>
+                    <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                </div>
+                
+                <div class="summary">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <h3>{self.scan_results.get('summary', {}).get('total_tests', 0)}</h3>
+                            <p>Total Tests</p>
+                        </div>
+                        <div class="summary-item">
+                            <h3>{self.scan_results.get('summary', {}).get('completed_tests', 0)}</h3>
+                            <p>Completed Tests</p>
+                        </div>
+                        <div class="summary-item">
+                            <h3>{self.scan_results.get('summary', {}).get('vulnerabilities_found', 0)}</h3>
+                            <p>Vulnerabilities Found</p>
+                        </div>
+                        <div class="summary-item">
+                            <h3>{self.scan_results.get('duration', 0):.2f}s</h3>
+                            <p>Scan Duration</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="results">
+                    <h2>Test Results</h2>
+                    {self._format_test_results_html()}
+                </div>
+                
+                <div class="footer">
+                    <p>Generated by Production Vulnerability Scanner v2.0 | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    
+    def _format_test_results_html(self):
+        """Format test results for HTML"""
+        html = ""
+        tests = self.scan_results.get('tests', {})
+        
+        for test_name, test_data in tests.items():
+            status = test_data.get('status', 'unknown')
+            status_class = f"status-{status}"
+            
+            html += f"""
+            <div class="test-result">
+                <div class="test-header">
+                    <h3>{test_data.get('test_name', test_name).title()}</h3>
+                    <span class="test-status {status_class}">{status.upper()}</span>
+                </div>
+                <div class="test-content">
+                    <p><strong>Timestamp:</strong> {test_data.get('timestamp', 'N/A')}</p>
+                    {f'<p><strong>Error:</strong> {test_data.get("error", "")}</p>' if test_data.get('error') else ''}
+                    {self._format_test_details_html(test_data.get('details', {}))}
+                </div>
+            </div>
+            """
+        
+        return html
+    
+    def _format_test_details_html(self, details):
+        """Format test details for HTML"""
+        if not details:
+            return ""
+        
+        html = "<h4>Details:</h4>"
+        
+        # Handle vulnerabilities specially
+        if 'vulnerabilities' in details:
+            vulnerabilities = details['vulnerabilities']
+            if vulnerabilities:
+                html += "<h5>Vulnerabilities Found:</h5>"
+                for vuln in vulnerabilities:
+                    severity = vuln.get('severity', 'Unknown').lower()
+                    html += f"""
+                    <div class="vulnerability vulnerability-{severity}">
+                        <strong>{vuln.get('type', 'Unknown Vulnerability')}</strong>
+                        <p><strong>Severity:</strong> {vuln.get('severity', 'Unknown')}</p>
+                        <p>{vuln.get('description', 'No description available')}</p>
+                    </div>
+                    """
+            else:
+                html += "<p>No vulnerabilities found.</p>"
+        
+        # Handle other details
+        html += f"<pre>{json.dumps(details, indent=2)}</pre>"
+        
+        return html
 
-    def cms_detection(self):
-        try:
-            response = requests.get(self.target, verify=False)
-            response_text = response.text.lower()
-            cms_patterns = {
-                "WordPress": re.compile(r'wp-content|wp-includes|wordpress'),
-                "Joomla": re.compile(r'joomla!|/media/jui/'),
-                "Drupal": re.compile(r'drupal|/sites/all/'),
-                "Magento": re.compile(r'magento|/skin/frontend/'),
-                "Shopify": re.compile(r'shopify|shopify\.com'),
-                "Wix": re.compile(r'wix\.com|static\.wixstatic\.com')
-            }
-            detected_cms = []
-            for cms, pattern in cms_patterns.items():
-                if pattern.search(response_text):
-                    detected_cms.append(cms)
-            return detected_cms if detected_cms else "No CMS detected."
-        except Exception as e:
-            return f"Error in CMS detection: {e}"
+# Maintain backward compatibility
+class UltimateAdvancedWebScanner(ProductionVulnerabilityScanner):
+    """Legacy class name for backward compatibility"""
+    pass
 
-    def advanced_xss_testing(self):
-        payloads = [
-            "<script>alert(1)</script>", "<img src=x onerror=alert(1)>",
-            "<body onload=alert(1)>", "<svg/onload=alert(1)>"
-        ]
-        vulnerable = False
-        try:
-            for payload in payloads:
-                response = requests.get(self.target, params={"q": payload}, verify=False)
-                if payload in response.text:
-                    vulnerable = True
-                    break
-            return "Potential XSS Vulnerability found!" if vulnerable else "No XSS Vulnerability detected."
-        except Exception as e:
-            return f"Error in XSS testing: {e}"
+# Legacy methods removed - now using enhanced scanner
 
-    def command_injection_testing(self):
-        payloads = ["; ls", "&& ls", "| ls"]
-        vulnerable = False
-        try:
-            for payload in payloads:
-                response = requests.get(self.target, params={"cmd": payload}, verify=False)
-                if "bin" in response.text or "root" in response.text:
-                    vulnerable = True
-                    break
-            return "Potential Command Injection Vulnerability found!" if vulnerable else "No Command Injection Vulnerability detected."
-        except Exception as e:
-            return f"Error in Command Injection testing: {e}"
+def save_results_to_file(results):
+    """Save scan results to JSON file"""
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    file_name = f"scan_results_{timestamp}.json"
+    
+    # Ensure results is serializable
+    if hasattr(results, 'to_dict'):
+        results = results.to_dict()
+    
+    with open(file_name, "w") as f:
+        json.dump(results, f, indent=4, default=str)
+    
+    logger.info(f"Results saved to {file_name}")
+    return file_name
 
-    def misconfiguration_detection(self):
-        try:
-            headers = {
-                'Server': 'Server header not present',
-                'X-Powered-By': 'X-Powered-By header not present'
-            }
-            response = requests.get(self.target, verify=False)
-            headers.update({k: v for k, v in response.headers.items() if k in headers})
-            return headers
-        except Exception as e:
-            return f"Error in misconfiguration detection: {e}"
+def print_colored_results(results):
+    """Print results with colors (legacy function)"""
+    print(f"\n=== SCAN RESULTS ===")
+    print(f"Target: {results.get('target', 'Unknown')}")
+    print(f"Scan ID: {results.get('scan_id', 'Unknown')}")
+    print(f"Duration: {results.get('duration', 0):.2f}s")
+    print(f"Tests: {results.get('summary', {}).get('total_tests', 0)}")
+    print(f"Vulnerabilities: {results.get('summary', {}).get('vulnerabilities_found', 0)}")
+    print("=" * 50)
 
-    def exploit_check(self):
-        try:
-            domain = self.target.replace('http://', '').replace('https://', '').split('/')[0]
-            command = f"searchsploit --json {domain}"
-            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            exploits = json.loads(result.stdout.decode('utf-8'))
-            return exploits
-        except Exception as e:
-            return f"Error in exploit check: {e}"
+def main():
+    """Main function for CLI usage"""
+    print("🔍 Production-Ready Vulnerability Scanner")
+    print("For CLI usage, run: python3 enhanced_scanner.py <target>")
+    print("For web interface, run: python3 start.py")
 
-    def shodan_integration(self):
-        if not SHODAN_AVAILABLE:
-            return "Error: shodan not available. Install with: pip install shodan"
-        try:
-            api_key = "your_shodan_api_key"
-            ip = socket.gethostbyname(self.target)
-            api = shodan.Shodan(api_key)
-            host = api.host(ip)
-            return host
-        except Exception as e:
-            return f"Error in Shodan integration: {e}"
-
-    def anomaly_detection(self):
-        try:
-            response = requests.get(self.target, verify=False)
-            if "Set-Cookie" in response.headers:
-                return "Anomaly Detected: Set-Cookie header present."
-            return "No anomalies detected."
-        except Exception as e:
-            return f"Error in anomaly detection: {e}"
-
-    def machine_learning_based_detection(self):
-        if not SKLEARN_AVAILABLE:
-            return "Error: scikit-learn not available. Install with: pip install scikit-learn"
-        try:
-            response = requests.get(self.target, verify=False)
-            text = response.text
-            vectorizer = TfidfVectorizer(stop_words='english')
-            X = vectorizer.fit_transform([text])
-            kmeans = KMeans(n_clusters=2, random_state=0).fit(X)
-            clusters = kmeans.labels_.tolist()
-            return "Potential Zero-Day Exploit Detected!" if clusters.count(1) > clusters.count(0) else "No Zero-Day Exploit Detected."
-        except Exception as e:
-            return f"Error in machine learning based detection: {e}"
-
-    def dns_lookup(self):
-        try:
-            dns_info = socket.gethostbyname_ex(self.target)
-            return dns_info
-        except socket.gaierror:
-            return "DNS lookup failed: Invalid hostname."
-        except Exception as e:
-            return f"Error in DNS lookup: {e}"
-
-    def whois_lookup(self):
-        try:
-            command = f"whois {self.target}"
-            result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if result.returncode == 0:
-                return result.stdout.decode('utf-8')
-            return "WHOIS lookup failed."
-        except Exception as e:
-            return f"Error in WHOIS lookup: {e}"
-
-    def ssrf_testing(self):
-        payload = f"http://localhost:8080/"
-        try:
-            response = requests.get(self.target, params={"url": payload}, verify=False)
-            if "localhost" in response.text or "127.0.0.1" in response.text:
-                return "Potential SSRF Vulnerability found!"
-            return "No SSRF Vulnerability detected."
-        except Exception as e:
-            return f"Error in SSRF testing: {e}"
-
-    def protocol_level_testing(self):
-        if not SCAPY_AVAILABLE:
-            return "Error: scapy not available. Install with: pip install scapy"
-        try:
-            pkt = IP(dst=self.target) / TCP(dport=80, flags="S")
-            response = sr1(pkt, timeout=2, verbose=False)
-            if response and response.haslayer(TCP) and response.getlayer(TCP).flags == 18:
-                return "Potential Protocol-Level Vulnerability found!"
-            return "No Protocol-Level Vulnerability detected."
-        except Exception as e:
-            return f"Error in protocol-level testing: {e}"
-
-    def scan_website(self):
-        results = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.threads) as executor:
-            futures = {
-                executor.submit(method): method.__name__ for method in [
-                    self.advanced_port_scan, self.subdomain_enumeration, 
-                    self.advanced_content_discovery, self.security_headers_analysis, 
-                    self.cms_detection, self.advanced_xss_testing, 
-                    self.command_injection_testing, self.misconfiguration_detection,
-                    self.exploit_check, self.shodan_integration, 
-                    self.anomaly_detection, self.machine_learning_based_detection, 
-                    self.dns_lookup, self.whois_lookup, 
-                    self.ssrf_testing, self.protocol_level_testing
-                ]
-            }
-            for future in concurrent.futures.as_completed(futures):
-                method_name = futures[future]
-                try:
-                    results[method_name] = future.result()
-                except Exception as e:
-                    results[method_name] = f"Error: {e}"
-        return results
+if __name__ == "__main__":
+    main()
 
 def save_results_to_file(results):
     timestamp = time.strftime("%Y%m%d-%H%M%S")
