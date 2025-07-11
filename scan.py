@@ -13,7 +13,6 @@ import time
 import re
 import subprocess
 import urllib3
-from colorama import Fore, Style, init
 
 # Optional imports
 try:
@@ -42,7 +41,6 @@ except ImportError:
     BS4_AVAILABLE = False
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-init(autoreset=True)
 
 import asyncio
 from advanced_scanner import AdvancedWebScanner
@@ -334,33 +332,4 @@ def save_results_to_file(results):
         json.dump(results, f, indent=4)
     return file_name
 
-def print_colored_results(results):
-    def colored_text(text, color):
-        return f"{color}{text}{Style.RESET_ALL}"
-
-    for technique, result in results.items():
-        if isinstance(result, dict):
-            print(colored_text(f"\n{technique} Results:", Fore.CYAN))
-            for key, value in result.items():
-                print(colored_text(f"{key}: {value}", Fore.YELLOW))
-        else:
-            print(colored_text(f"\n{technique}:", Fore.CYAN))
-            print(colored_text(result, Fore.YELLOW))
-
-def main():
-    target_website = input(Fore.GREEN + "Enter the website URL to scan: " + Style.RESET_ALL)
-    try:
-        scanner = UltimateAdvancedWebScanner(target_website)
-        results = scanner.scan_website()
-
-        print(Fore.MAGENTA + "\nScan Results:" + Style.RESET_ALL)
-        print_colored_results(results)
-
-        file_name = save_results_to_file(results)
-        print(Fore.GREEN + f"\nResults saved to {file_name}" + Style.RESET_ALL)
-
-    except Exception as e:
-        print(Fore.RED + f"An error occurred: {e}" + Style.RESET_ALL)
-
-if __name__ == "__main__":
-    main()
+# CLI functionality removed - web interface only
