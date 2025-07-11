@@ -1,0 +1,31 @@
+{
+  "max_workers": 10,
+  "timeout": 30,
+  "rate_limit": 100,
+  "rate_window": 3600,
+  "enable_javascript": true,
+  "enable_ai_detection": true,
+  "enable_deep_scan": false,
+  "max_scan_depth": 3,
+  "report_formats": [
+    "html",
+    "json"
+  ],
+  "output_directory": "./reports",
+  "web_host": "0.0.0.0",
+  "web_port": 8080,
+  "debug_mode": false,
+  "enable_auth": false,
+  "session_timeout": 3600,
+  "api_authentication": false,
+  "api_rate_limit": 60,
+  "api_rate_window": 60,
+  "log_level": "INFO",
+  "log_file": "scanner.log",
+  "log_max_size": 10485760,
+  "log_backup_count": 5,
+  "user_agent": "VulnScanner/2.0 (Security Testing)",
+  "follow_redirects": true,
+  "verify_ssl": true,
+  "request_delay": 0.1
+}
