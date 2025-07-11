@@ -188,7 +188,8 @@ class VulnScannerApp {
             return;
         }
         
-        if (!this.validateUrl({ target: { value: target } })) {
+        if (!this.isValidUrl(target)) {
+            this.showNotification('Please enter a valid URL', 'error');
             this.targetInput.focus();
             return;
         }
