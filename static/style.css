@@ -499,18 +499,26 @@ body {
     }
 }
 
-/* Responsive Design */
+/* Responsive Design - Enhanced Mobile-First Approach */
 @media (max-width: 768px) {
     .container {
-        padding: 0 15px;
+        padding: 0 10px;
+    }
+    
+    .header {
+        padding: 1.5rem 0;
     }
     
     .logo h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
     
     .logo i {
-        font-size: 2rem;
+        font-size: 1.8rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
     }
     
     .features-grid {
@@ -530,6 +538,59 @@ body {
     
     .scan-form {
         padding: 1.5rem;
+    }
+    
+    .scan-btn {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .input-group input {
+        padding: 1rem;
+        font-size: 1rem;
+    }
+    
+    .input-group label {
+        font-size: 1rem;
+    }
+    
+    .progress-section,
+    .results-section {
+        padding: 1.5rem;
+    }
+    
+    .generate-report-btn,
+    .export-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+    
+    .feature-card {
+        padding: 1.5rem;
+    }
+    
+    .feature-card h4 {
+        font-size: 1.1rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.95rem;
+    }
+    
+    /* Mobile-specific notification adjustments */
+    .notification-container {
+        left: 10px;
+        right: 10px;
+        top: 10px;
+        max-width: none;
+    }
+    
+    .notification {
+        padding: 0.75rem;
+        font-size: 0.9rem;
     }
 }
 
@@ -797,62 +858,470 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* Enhanced Mobile Responsiveness */
+/* Enhanced Results Styling */
+.summary-dashboard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.summary-dashboard h3 {
+    color: var(--accent-primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.summary-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.summary-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.summary-card.has-vulns {
+    border-color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-bottom: 0.5rem;
+    word-break: break-all;
+}
+
+.summary-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Vulnerability Section */
+.vulnerability-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.vulnerability-section h3 {
+    color: #dc3545;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vulnerability-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.vulnerability-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    border-left: 4px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.vulnerability-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.vulnerability-card.critical {
+    border-left-color: #dc3545;
+    background: rgba(220, 53, 69, 0.05);
+}
+
+.vulnerability-card.high {
+    border-left-color: #fd7e14;
+    background: rgba(253, 126, 20, 0.05);
+}
+
+.vulnerability-card.medium {
+    border-left-color: #ffc107;
+    background: rgba(255, 193, 7, 0.05);
+}
+
+.vulnerability-card.low {
+    border-left-color: #20c997;
+    background: rgba(32, 201, 151, 0.05);
+}
+
+.vuln-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.vuln-type {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.vuln-severity {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.vuln-severity.critical {
+    background: #dc3545;
+    color: white;
+}
+
+.vuln-severity.high {
+    background: #fd7e14;
+    color: white;
+}
+
+.vuln-severity.medium {
+    background: #ffc107;
+    color: #212529;
+}
+
+.vuln-severity.low {
+    background: #20c997;
+    color: white;
+}
+
+.vuln-description {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.vuln-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.vuln-category {
+    background: var(--bg-primary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+/* Security Findings Section */
+.security-findings-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.security-findings-section h3 {
+    color: var(--accent-primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.finding-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    transition: var(--transition);
+}
+
+.finding-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.finding-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.finding-type {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.finding-count {
+    background: var(--accent-primary);
+    color: var(--accent-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.finding-category {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.finding-details {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.detail-item {
+    background: var(--bg-primary);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+}
+
+/* Technical Details Section */
+.technical-details-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.technical-details-section h3 {
+    color: var(--accent-primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.details-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.detail-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.detail-card:hover {
+    border-color: var(--border-hover);
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    cursor: pointer;
+    background: var(--bg-quaternary);
+    transition: var(--transition);
+}
+
+.detail-header:hover {
+    background: var(--border-color);
+}
+
+.detail-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.detail-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.detail-status.success {
+    background: rgba(32, 201, 151, 0.2);
+    color: #20c997;
+}
+
+.detail-status.error {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+.expand-icon {
+    transition: transform 0.3s ease;
+}
+
+.detail-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.detail-content {
+    padding: 1rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.detail-card.expanded .detail-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.detail-content pre {
+    background: var(--bg-primary);
+    padding: 1rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Mobile Responsiveness Enhancements */
 @media (max-width: 768px) {
-    .notification-container {
-        left: 10px;
-        right: 10px;
-        top: 10px;
-        max-width: none;
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
     }
     
-    .notification {
-        padding: 0.75rem;
-        font-size: 0.9rem;
-    }
-    
-    .scan-btn {
-        padding: 0.875rem 1.5rem;
-        font-size: 1rem;
-    }
-    
-    .input-group input {
-        padding: 0.875rem;
-    }
-    
-    .result-item {
+    .summary-card {
         padding: 1rem;
     }
     
-    .feature-card {
-        padding: 1.25rem;
+    .summary-value {
+        font-size: 1.5rem;
     }
     
-    .export-btn {
-        padding: 0.625rem 0.875rem;
-        font-size: 0.85rem;
+    .findings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vulnerability-section,
+    .security-findings-section,
+    .technical-details-section {
+        padding: 1.5rem;
+    }
+    
+    .vuln-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .vuln-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .finding-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-dashboard,
+    .vulnerability-section,
+    .security-findings-section,
+    .technical-details-section {
+        padding: 1rem;
+    }
+    
+    .detail-content {
+        font-size: 0.8rem;
+    }
+    
+    .detail-content pre {
+        font-size: 0.7rem;
     }
 }
 
 @media (max-width: 480px) {
     .container {
-        padding: 0 10px;
+        padding: 0 8px;
     }
     
     .header {
-        padding: 1.5rem 0;
+        padding: 1rem 0;
+    }
+    
+    .logo {
+        flex-direction: column;
+        gap: 0.5rem;
     }
     
     .logo h1 {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
     }
     
     .logo i {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 0.9rem;
     }
     
     .scan-form, .progress-section, .results-section {
-        padding: 1.25rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .scan-form h2 {
+        font-size: 1.3rem;
+    }
+    
+    .input-group input {
+        padding: 0.875rem;
+        font-size: 0.95rem;
+    }
+    
+    .scan-btn {
+        padding: 0.875rem 1.25rem;
+        font-size: 0.95rem;
+        width: 100%;
     }
     
     .features-grid {
@@ -860,8 +1329,133 @@ body {
         gap: 1rem;
     }
     
+    .feature-card {
+        padding: 1.25rem;
+    }
+    
+    .feature-card h4 {
+        font-size: 1rem;
+    }
+    
+    .feature-card p {
+        font-size: 0.9rem;
+    }
+    
     .results-header {
         flex-direction: column;
         gap: 0.75rem;
+    }
+    
+    .results-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .generate-report-btn,
+    .export-btn {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .progress-bar {
+        height: 10px;
+    }
+    
+    .progress-text {
+        font-size: 0.85rem;
+    }
+    
+    /* Enhanced mobile typography */
+    body {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.3rem;
+    }
+    
+    h3 {
+        font-size: 1.1rem;
+    }
+    
+    h4 {
+        font-size: 1rem;
+    }
+    
+    /* Better touch targets */
+    button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .notification {
+        padding: 0.625rem;
+        font-size: 0.85rem;
+    }
+    
+    .notification-close {
+        min-width: 32px;
+        min-height: 32px;
+    }
+}
+
+/* Enhanced touch device support */
+@media (hover: none) and (pointer: coarse) {
+    .feature-card:hover,
+    .result-item:hover,
+    .scan-btn:hover,
+    .generate-report-btn:hover,
+    .export-btn:hover {
+        transform: none;
+        box-shadow: var(--shadow);
+    }
+    
+    .feature-card:active,
+    .result-item:active,
+    .scan-btn:active,
+    .generate-report-btn:active,
+    .export-btn:active {
+        transform: scale(0.98);
+    }
+    
+    /* Larger touch targets */
+    button {
+        min-height: 48px;
+        padding: 0.75rem 1rem;
+    }
+    
+    .input-group input {
+        min-height: 48px;
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Landscape orientation adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+    .header {
+        padding: 1rem 0;
+    }
+    
+    .logo {
+        flex-direction: row;
+        gap: 1rem;
+    }
+    
+    .logo h1 {
+        font-size: 1.8rem;
+    }
+    
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .summary-grid {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

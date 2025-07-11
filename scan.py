@@ -13,6 +13,7 @@ import time
 from datetime import datetime
 from enhanced_scanner import EnhancedVulnerabilityScanner
 from demo_mode import is_demo_mode_needed, generate_demo_scan_results
+from advanced_analyzer import AdvancedSecurityAnalyzer
 import urllib3
 
 # Configure logging
