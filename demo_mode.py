@@ -40,7 +40,14 @@ class DemoScanner:
                     {
                         'type': 'Information Disclosure',
                         'severity': 'Low',
-                        'description': 'Server version disclosed in headers'
+                        'description': 'Server version disclosed in headers',
+                        'remediation': 'Hide server version in HTTP headers'
+                    },
+                    {
+                        'type': 'Missing Security Header',
+                        'severity': 'Medium',
+                        'description': 'X-Frame-Options: Consider implementing X-Frame-Options',
+                        'remediation': 'Add X-Frame-Options header to prevent clickjacking'
                     }
                 ]
             },
@@ -51,9 +58,84 @@ class DemoScanner:
                 'open_ports': [80, 443, 21, 22],
                 'vulnerabilities': [
                     {
-                        'type': 'Outdated CMS',
+                        'type': 'Cross-Site Scripting (XSS)',
+                        'severity': 'High',
+                        'description': 'XSS vulnerability detected in URL parameter',
+                        'remediation': 'Implement proper input validation and output encoding'
+                    },
+                    {
+                        'type': 'SQL Injection',
+                        'severity': 'Critical',
+                        'description': 'SQL injection vulnerability detected using Error-based detection',
+                        'remediation': 'Use parameterized queries and input validation'
+                    },
+                    {
+                        'type': 'Directory Traversal',
+                        'severity': 'High',
+                        'description': 'Directory traversal vulnerability detected',
+                        'remediation': 'Implement proper file path validation and sanitization'
+                    },
+                    {
+                        'type': 'Cross-Site Request Forgery (CSRF)',
                         'severity': 'Medium',
-                        'description': 'WordPress version may be outdated'
+                        'description': 'CSRF vulnerability detected',
+                        'remediation': 'Implement CSRF tokens and proper request validation'
+                    },
+                    {
+                        'type': 'Missing Security Header',
+                        'severity': 'Medium',
+                        'description': 'Content-Security-Policy: Implement CSP header for enhanced security',
+                        'remediation': 'Add Content-Security-Policy header'
+                    }
+                ]
+            },
+            'vulnerable-site.com': {
+                'server': 'Apache/2.2.22',
+                'cms': 'Custom PHP Application',
+                'technologies': ['PHP', 'MySQL', 'JavaScript'],
+                'open_ports': [80, 443, 21, 22, 3306],
+                'vulnerabilities': [
+                    {
+                        'type': 'Cross-Site Scripting (XSS)',
+                        'severity': 'High',
+                        'description': 'XSS vulnerability detected in Form input',
+                        'remediation': 'Implement proper input validation and output encoding'
+                    },
+                    {
+                        'type': 'SQL Injection',
+                        'severity': 'Critical',
+                        'description': 'SQL injection vulnerability detected using Error-based detection via form',
+                        'remediation': 'Use parameterized queries and input validation'
+                    },
+                    {
+                        'type': 'Command Injection',
+                        'severity': 'Critical',
+                        'description': 'Command injection vulnerability detected',
+                        'remediation': 'Avoid executing user input as system commands'
+                    },
+                    {
+                        'type': 'File Upload Vulnerability',
+                        'severity': 'High',
+                        'description': 'Insecure file upload detected',
+                        'remediation': 'Implement file type validation and secure file storage'
+                    },
+                    {
+                        'type': 'Authentication Bypass',
+                        'severity': 'Critical',
+                        'description': 'Authentication bypass vulnerability detected',
+                        'remediation': 'Implement proper authentication and session management'
+                    },
+                    {
+                        'type': 'Directory Traversal',
+                        'severity': 'High',
+                        'description': 'Directory traversal vulnerability detected',
+                        'remediation': 'Implement proper file path validation and sanitization'
+                    },
+                    {
+                        'type': 'Information Disclosure',
+                        'severity': 'Medium',
+                        'description': 'Sensitive information exposed in error messages',
+                        'remediation': 'Implement proper error handling and logging'
                     }
                 ]
             }
@@ -149,6 +231,29 @@ class DemoScanner:
                         'vulnerabilities': domain_data['vulnerabilities']
                     }
                 },
+                'advanced_vulnerability_scan': {
+                    'test_name': 'Advanced Vulnerability Scanning',
+                    'status': 'success',
+                    'timestamp': datetime.now().isoformat(),
+                    'details': {
+                        'vulnerabilities': [
+                            vuln for vuln in domain_data['vulnerabilities']
+                            if vuln['severity'] in ['Critical', 'High']
+                        ] if len(domain_data['vulnerabilities']) > 1 else [],
+                        'techniques_used': [
+                            'Form-based XSS testing',
+                            'Advanced SQL injection with multiple payloads',
+                            'Directory traversal with encoding variations',
+                            'Command injection testing',
+                            'CSRF protection analysis',
+                            'File upload vulnerability testing',
+                            'Authentication bypass testing'
+                        ],
+                        'total_payloads_tested': random.randint(150, 300),
+                        'forms_discovered': random.randint(2, 8),
+                        'contexts_tested': ['URL parameters', 'Form inputs', 'HTTP headers']
+                    }
+                },
                 'technology_detection': {
                     'test_name': 'Technology Detection',
                     'status': 'success',
@@ -183,8 +288,8 @@ class DemoScanner:
                 }
             },
             'summary': {
-                'total_tests': 7,
-                'completed_tests': 7,
+                'total_tests': 8,
+                'completed_tests': 8,
                 'failed_tests': 0,
                 'vulnerabilities_found': len(domain_data['vulnerabilities'])
             }
