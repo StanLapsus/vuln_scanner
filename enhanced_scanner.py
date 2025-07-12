@@ -77,12 +77,24 @@ class SecurityTest:
 class EnhancedVulnerabilityScanner:
     """Enhanced production-ready vulnerability scanner with real-time capabilities"""
     
-    def __init__(self, target: str, max_workers: int = 10, timeout: int = 30):
+    def __init__(self, target: str, max_workers: int = None, timeout: int = None):
         self.original_target = target
         self.target = self._normalize_target(target)
         self.domain = self._extract_domain(self.target)
-        self.max_workers = max_workers
-        self.timeout = timeout
+        
+        # Get dynamic configuration
+        try:
+            from dynamic_config import get_dynamic_config
+            self.dynamic_config = get_dynamic_config(self.target)
+            self.max_workers = max_workers or self.dynamic_config.get('workers', 10)
+            self.timeout = timeout or self.dynamic_config.get('timeout', 30)
+            logger.info(f"Using dynamic config: workers={self.max_workers}, timeout={self.timeout}")
+        except ImportError:
+            logger.warning("Dynamic config not available, using defaults")
+            self.max_workers = max_workers or 10
+            self.timeout = timeout or 30
+            self.dynamic_config = None
+        
         self.session = self._create_session()
         self.scan_id = self._generate_scan_id()
         self.start_time = datetime.now()
@@ -145,6 +157,38 @@ class EnhancedVulnerabilityScanner:
         if self.progress_callback:
             self.progress_callback(percentage, message)
         logger.info(f"Progress: {percentage:.1f}% - {message}")
+    
+    def _get_adaptive_delay(self, test_type: str) -> float:
+        """Get adaptive delay for a specific test type"""
+        if self.dynamic_config:
+            try:
+                from dynamic_config import get_adaptive_delay
+                return get_adaptive_delay(self.target, test_type)
+            except ImportError:
+                pass
+        
+        # Fallback to static delays
+        delays = {
+            'vulnerability_scan': 0.2,
+            'port_scan': 0.05,
+            'directory_scan': 0.15,
+            'header_scan': 0.05,
+            'ssl_scan': 0.1,
+            'technology_scan': 0.08,
+            'information_disclosure': 0.1
+        }
+        return delays.get(test_type, 0.1)
+    
+    def _should_skip_test(self, test_type: str) -> tuple:
+        """Check if a test should be skipped based on target characteristics"""
+        if self.dynamic_config:
+            try:
+                from dynamic_config import should_skip_test
+                return should_skip_test(self.target, test_type)
+            except ImportError:
+                pass
+        
+        return False, ""
     
     def _test_connectivity(self) -> Dict[str, Any]:
         """Test basic connectivity to target"""
@@ -227,13 +271,25 @@ class EnhancedVulnerabilityScanner:
             'details': {'open_ports': []}
         }
         
+        # Check if we should skip this test
+        skip_test, skip_reason = self._should_skip_test('port_scan')
+        if skip_test:
+            test_result['status'] = 'skipped'
+            test_result['skip_reason'] = skip_reason
+            return test_result
+        
         common_ports = [21, 22, 23, 25, 53, 80, 110, 143, 443, 993, 995, 1433, 1521, 3306, 3389, 5432, 5900, 6379, 8080, 8443]
+        delay = self._get_adaptive_delay('port_scan')
         
         try:
             for port in common_ports:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(5)
+                    
+                    # Use dynamic timeout
+                    timeout = min(self.timeout // 4, 10)
+                    sock.settimeout(timeout)
+                    
                     result = sock.connect_ex((self.domain, port))
                     if result == 0:
                         test_result['details']['open_ports'].append({
@@ -242,6 +298,11 @@ class EnhancedVulnerabilityScanner:
                             'service': self._get_service_name(port)
                         })
                     sock.close()
+                    
+                    # Adaptive delay between port checks
+                    if delay > 0:
+                        time.sleep(delay)
+                        
                 except Exception:
                     continue
             
