@@ -1795,9 +1795,29 @@ body {
 
 .heatmap-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1rem;
     margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .heatmap-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.8rem;
+    }
+    
+    .heatmap-cell {
+        padding: 0.8rem;
+        min-height: 70px;
+    }
+    
+    .cell-label {
+        font-size: 0.8rem;
+    }
+    
+    .cell-value {
+        font-size: 1rem;
+    }
 }
 
 .heatmap-cell {
@@ -1808,6 +1828,15 @@ body {
     font-weight: 600;
     transition: var(--transition);
     cursor: pointer;
+    overflow: hidden;
+    word-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .heatmap-cell:hover {
@@ -1833,13 +1862,23 @@ body {
 }
 
 .cell-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 0.5rem;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
 .cell-value {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* Timeline Styles */
