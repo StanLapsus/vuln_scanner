@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 import hashlib
 import os
 import sys
+from advanced_vuln_scanner import AdvancedVulnerabilityScanner
 
 # Configure logging
 logging.basicConfig(
@@ -647,6 +648,38 @@ class EnhancedVulnerabilityScanner:
         
         return test_result
     
+    def _advanced_vulnerability_scan(self) -> Dict[str, Any]:
+        """Run advanced vulnerability scan using sophisticated detection methods"""
+        test_result = {
+            'test_name': 'Advanced Vulnerability Scan',
+            'status': 'running',
+            'timestamp': datetime.now().isoformat(),
+            'details': {}
+        }
+        
+        try:
+            # Initialize advanced vulnerability scanner
+            adv_scanner = AdvancedVulnerabilityScanner(self.target, self.session)
+            
+            # Run comprehensive advanced scan
+            logger.info("Running advanced vulnerability detection...")
+            advanced_results = adv_scanner.run_comprehensive_scan()
+            
+            # Extract results
+            test_result['details'] = advanced_results
+            test_result['status'] = 'success'
+            
+            # Log findings
+            if advanced_results.get('vulnerabilities'):
+                logger.info(f"Advanced scan found {len(advanced_results['vulnerabilities'])} vulnerabilities")
+            
+        except Exception as e:
+            test_result['status'] = 'error'
+            test_result['error'] = str(e)
+            logger.error(f"Advanced vulnerability scan failed: {e}")
+        
+        return test_result
+    
     async def run_comprehensive_scan(self) -> Dict[str, Any]:
         """Run comprehensive security scan"""
         logger.info(f"Starting comprehensive scan for {self.target}")
@@ -659,7 +692,8 @@ class EnhancedVulnerabilityScanner:
             ('ssl_analysis', self._ssl_analysis),
             ('vulnerability_scan', self._vulnerability_scan),
             ('technology_detection', self._technology_detection),
-            ('information_disclosure', self._information_disclosure)
+            ('information_disclosure', self._information_disclosure),
+            ('advanced_vulnerability_scan', self._advanced_vulnerability_scan)
         ]
         
         scan_results = {

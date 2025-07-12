@@ -383,7 +383,35 @@ class VulnScannerApp {
                     <div class="summary-label">Duration</div>
                 </div>
             </div>
+            <div class="analytics-section">
+                <h4><i class="fas fa-chart-line"></i> Analytics & Visualization</h4>
+                <div class="analytics-buttons">
+                    <button id="generateAnalyticsBtn" class="analytics-btn">
+                        <i class="fas fa-chart-pie"></i> Generate Analytics Dashboard
+                    </button>
+                    <button id="generateHeatmapBtn" class="analytics-btn">
+                        <i class="fas fa-th"></i> Generate Risk Heatmap
+                    </button>
+                    <button id="generateTimelineBtn" class="analytics-btn">
+                        <i class="fas fa-clock"></i> Generate Timeline Analysis
+                    </button>
+                </div>
+                <div id="analyticsContainer" class="analytics-container" style="display: none;">
+                    <!-- Analytics content will be populated here -->
+                </div>
+            </div>
         `;
+        
+        // Add event listeners for analytics buttons
+        summaryDiv.addEventListener('click', (e) => {
+            if (e.target.id === 'generateAnalyticsBtn') {
+                this.generateAnalyticsDashboard(results);
+            } else if (e.target.id === 'generateHeatmapBtn') {
+                this.generateRiskHeatmap(results);
+            } else if (e.target.id === 'generateTimelineBtn') {
+                this.generateTimelineAnalysis(results);
+            }
+        });
         
         return summaryDiv;
     }
@@ -808,6 +836,471 @@ class VulnScannerApp {
             case 'warning': return 'fas fa-exclamation-triangle';
             case 'info': return 'fas fa-info-circle';
             default: return 'fas fa-info-circle';
+        }
+    }
+    
+    async generateAnalyticsDashboard(results) {
+        const container = document.getElementById('analyticsContainer');
+        const btn = document.getElementById('generateAnalyticsBtn');
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Analytics...';
+            
+            // Generate analytics dashboard
+            const analyticsData = this.processAnalyticsData(results);
+            
+            container.innerHTML = `
+                <h4><i class="fas fa-chart-pie"></i> Analytics Dashboard</h4>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h5>Vulnerability Distribution</h5>
+                        <canvas id="vulnerabilityChart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h5>Risk Assessment</h5>
+                        <div class="risk-assessment">
+                            <div class="risk-meter">
+                                <div class="risk-level risk-${analyticsData.riskLevel.toLowerCase()}">
+                                    ${analyticsData.riskLevel}
+                                </div>
+                                <div class="risk-score">${analyticsData.securityScore}%</div>
+                            </div>
+                            <div class="risk-factors">
+                                <h6>Key Risk Factors:</h6>
+                                <ul>
+                                    ${analyticsData.riskFactors.map(factor => `<li>${factor}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="analytics-card">
+                        <h5>Test Results Overview</h5>
+                        <canvas id="testResultsChart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h5>Security Score Breakdown</h5>
+                        <div class="score-breakdown">
+                            <div class="score-item">
+                                <span class="score-label">Critical Issues</span>
+                                <span class="score-value">${analyticsData.criticalCount}</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">High Issues</span>
+                                <span class="score-value">${analyticsData.highCount}</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Medium Issues</span>
+                                <span class="score-value">${analyticsData.mediumCount}</span>
+                            </div>
+                            <div class="score-item">
+                                <span class="score-label">Low Issues</span>
+                                <span class="score-value">${analyticsData.lowCount}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="recommendations-section">
+                    <h5><i class="fas fa-lightbulb"></i> Recommendations</h5>
+                    <div class="recommendations-grid">
+                        ${analyticsData.recommendations.map(rec => `
+                            <div class="recommendation-card">
+                                <i class="fas fa-shield-alt"></i>
+                                <p>${rec}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            container.style.display = 'block';
+            
+            // Initialize charts
+            this.initializeCharts(analyticsData);
+            
+            this.showNotification('Analytics dashboard generated successfully!', 'success');
+            
+        } catch (error) {
+            this.showNotification('Error generating analytics: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-chart-pie"></i> Generate Analytics Dashboard';
+        }
+    }
+    
+    async generateRiskHeatmap(results) {
+        const container = document.getElementById('analyticsContainer');
+        const btn = document.getElementById('generateHeatmapBtn');
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Heatmap...';
+            
+            const heatmapData = this.processHeatmapData(results);
+            
+            container.innerHTML = `
+                <h4><i class="fas fa-th"></i> Risk Heatmap</h4>
+                <div class="heatmap-container">
+                    <div class="heatmap-legend">
+                        <span class="legend-item">
+                            <span class="legend-color low"></span>
+                            <span class="legend-label">Low Risk</span>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color medium"></span>
+                            <span class="legend-label">Medium Risk</span>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color high"></span>
+                            <span class="legend-label">High Risk</span>
+                        </span>
+                        <span class="legend-item">
+                            <span class="legend-color critical"></span>
+                            <span class="legend-label">Critical Risk</span>
+                        </span>
+                    </div>
+                    <div class="heatmap-grid">
+                        ${heatmapData.map(item => `
+                            <div class="heatmap-cell ${item.riskLevel}" title="${item.category}: ${item.riskScore}% risk">
+                                <div class="cell-label">${item.category}</div>
+                                <div class="cell-value">${item.riskScore}%</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            container.style.display = 'block';
+            
+            this.showNotification('Risk heatmap generated successfully!', 'success');
+            
+        } catch (error) {
+            this.showNotification('Error generating heatmap: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-th"></i> Generate Risk Heatmap';
+        }
+    }
+    
+    async generateTimelineAnalysis(results) {
+        const container = document.getElementById('analyticsContainer');
+        const btn = document.getElementById('generateTimelineBtn');
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Timeline...';
+            
+            const timelineData = this.processTimelineData(results);
+            
+            container.innerHTML = `
+                <h4><i class="fas fa-clock"></i> Timeline Analysis</h4>
+                <div class="timeline-container">
+                    <div class="timeline-stats">
+                        <div class="timeline-stat">
+                            <span class="stat-value">${timelineData.totalDuration.toFixed(2)}s</span>
+                            <span class="stat-label">Total Duration</span>
+                        </div>
+                        <div class="timeline-stat">
+                            <span class="stat-value">${timelineData.testsCount}</span>
+                            <span class="stat-label">Tests Executed</span>
+                        </div>
+                        <div class="timeline-stat">
+                            <span class="stat-value">${timelineData.avgTestDuration.toFixed(2)}s</span>
+                            <span class="stat-label">Avg Test Duration</span>
+                        </div>
+                    </div>
+                    <div class="timeline-chart">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                    <div class="timeline-tests">
+                        <h5>Test Execution Timeline</h5>
+                        <div class="test-timeline">
+                            ${timelineData.tests.map(test => `
+                                <div class="timeline-item ${test.status}">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <div class="test-name">${test.name}</div>
+                                        <div class="test-duration">${test.duration}s</div>
+                                        <div class="test-status">${test.status}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.style.display = 'block';
+            
+            // Initialize timeline chart
+            this.initializeTimelineChart(timelineData);
+            
+            this.showNotification('Timeline analysis generated successfully!', 'success');
+            
+        } catch (error) {
+            this.showNotification('Error generating timeline: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-clock"></i> Generate Timeline Analysis';
+        }
+    }
+    
+    processAnalyticsData(results) {
+        const vulnerabilities = this.extractAllVulnerabilities(results);
+        
+        // Count by severity
+        const severityCounts = {
+            Critical: 0,
+            High: 0,
+            Medium: 0,
+            Low: 0,
+            Info: 0
+        };
+        
+        vulnerabilities.forEach(vuln => {
+            const severity = vuln.severity || 'Info';
+            if (severityCounts.hasOwnProperty(severity)) {
+                severityCounts[severity]++;
+            }
+        });
+        
+        // Calculate security score
+        const totalVulns = vulnerabilities.length;
+        const criticalWeight = severityCounts.Critical * 10;
+        const highWeight = severityCounts.High * 7;
+        const mediumWeight = severityCounts.Medium * 4;
+        const lowWeight = severityCounts.Low * 1;
+        
+        const totalWeight = criticalWeight + highWeight + mediumWeight + lowWeight;
+        const securityScore = Math.max(0, 100 - (totalWeight * 2));
+        
+        // Determine risk level
+        let riskLevel = 'Low';
+        if (severityCounts.Critical > 0) {
+            riskLevel = 'Critical';
+        } else if (severityCounts.High > 2) {
+            riskLevel = 'High';
+        } else if (severityCounts.High > 0) {
+            riskLevel = 'Medium';
+        }
+        
+        // Generate risk factors
+        const riskFactors = [];
+        if (severityCounts.Critical > 0) {
+            riskFactors.push(`${severityCounts.Critical} Critical vulnerabilities detected`);
+        }
+        if (severityCounts.High > 0) {
+            riskFactors.push(`${severityCounts.High} High severity vulnerabilities found`);
+        }
+        if (totalVulns > 10) {
+            riskFactors.push(`High vulnerability count: ${totalVulns} total issues`);
+        }
+        if (riskFactors.length === 0) {
+            riskFactors.push('No significant security issues detected');
+        }
+        
+        // Generate recommendations
+        const recommendations = [];
+        if (severityCounts.Critical > 0) {
+            recommendations.push('Immediately address all Critical vulnerabilities');
+        }
+        if (severityCounts.High > 0) {
+            recommendations.push('Prioritize fixing High severity vulnerabilities');
+        }
+        recommendations.push('Implement Web Application Firewall (WAF)');
+        recommendations.push('Regular security testing and monitoring');
+        recommendations.push('Security awareness training for development team');
+        
+        return {
+            severityCounts,
+            securityScore,
+            riskLevel,
+            riskFactors,
+            recommendations,
+            criticalCount: severityCounts.Critical,
+            highCount: severityCounts.High,
+            mediumCount: severityCounts.Medium,
+            lowCount: severityCounts.Low,
+            totalVulnerabilities: totalVulns
+        };
+    }
+    
+    processHeatmapData(results) {
+        const tests = results.tests || {};
+        const heatmapData = [];
+        
+        const categories = {
+            'Network Security': ['port_scan', 'ssl_analysis'],
+            'Web Application': ['vulnerability_scan', 'advanced_vulnerability_scan'],
+            'Infrastructure': ['security_headers', 'technology_detection'],
+            'Information Disclosure': ['information_disclosure']
+        };
+        
+        for (const [category, testNames] of Object.entries(categories)) {
+            let vulnerabilityCount = 0;
+            let criticalCount = 0;
+            
+            testNames.forEach(testName => {
+                if (tests[testName] && tests[testName].details) {
+                    const testVulns = tests[testName].details.vulnerabilities || [];
+                    vulnerabilityCount += testVulns.length;
+                    criticalCount += testVulns.filter(v => v.severity === 'Critical').length;
+                }
+            });
+            
+            let riskScore = 0;
+            let riskLevel = 'low';
+            
+            if (criticalCount > 0) {
+                riskScore = Math.min(100, criticalCount * 25);
+                riskLevel = 'critical';
+            } else if (vulnerabilityCount > 3) {
+                riskScore = Math.min(100, vulnerabilityCount * 10);
+                riskLevel = 'high';
+            } else if (vulnerabilityCount > 0) {
+                riskScore = vulnerabilityCount * 5;
+                riskLevel = 'medium';
+            }
+            
+            heatmapData.push({
+                category,
+                riskScore,
+                riskLevel,
+                vulnerabilityCount
+            });
+        }
+        
+        return heatmapData;
+    }
+    
+    processTimelineData(results) {
+        const tests = results.tests || {};
+        const testData = [];
+        
+        let totalDuration = 0;
+        
+        for (const [testName, testResult] of Object.entries(tests)) {
+            const duration = testResult.duration || 0.1; // Default duration
+            totalDuration += duration;
+            
+            testData.push({
+                name: testName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                duration: duration.toFixed(2),
+                status: testResult.status || 'unknown',
+                timestamp: testResult.timestamp || new Date().toISOString()
+            });
+        }
+        
+        return {
+            tests: testData,
+            totalDuration,
+            testsCount: testData.length,
+            avgTestDuration: totalDuration / testData.length
+        };
+    }
+    
+    extractAllVulnerabilities(results) {
+        const vulnerabilities = [];
+        const tests = results.tests || {};
+        
+        for (const [testName, testResult] of Object.entries(tests)) {
+            if (testResult.details && testResult.details.vulnerabilities) {
+                vulnerabilities.push(...testResult.details.vulnerabilities);
+            }
+        }
+        
+        return vulnerabilities;
+    }
+    
+    initializeCharts(analyticsData) {
+        // Vulnerability distribution pie chart
+        const vulnCtx = document.getElementById('vulnerabilityChart');
+        if (vulnCtx) {
+            new Chart(vulnCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(analyticsData.severityCounts),
+                    datasets: [{
+                        data: Object.values(analyticsData.severityCounts),
+                        backgroundColor: [
+                            '#dc3545', // Critical
+                            '#fd7e14', // High
+                            '#ffc107', // Medium
+                            '#28a745', // Low
+                            '#6c757d'  // Info
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Test results bar chart
+        const testCtx = document.getElementById('testResultsChart');
+        if (testCtx) {
+            new Chart(testCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low'],
+                    datasets: [{
+                        label: 'Vulnerabilities',
+                        data: [
+                            analyticsData.criticalCount,
+                            analyticsData.highCount,
+                            analyticsData.mediumCount,
+                            analyticsData.lowCount
+                        ],
+                        backgroundColor: [
+                            '#dc3545',
+                            '#fd7e14',
+                            '#ffc107',
+                            '#28a745'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    initializeTimelineChart(timelineData) {
+        const ctx = document.getElementById('timelineChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timelineData.tests.map(t => t.name),
+                    datasets: [{
+                        label: 'Test Duration (seconds)',
+                        data: timelineData.tests.map(t => parseFloat(t.duration)),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
     }
 }
