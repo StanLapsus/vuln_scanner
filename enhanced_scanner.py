@@ -119,6 +119,12 @@ class EnhancedVulnerabilityScanner:
         if any(char in target for char in dangerous_chars):
             raise ValueError("Target URL contains invalid characters")
         
+        # Security: Check for dangerous URL schemes before adding protocol
+        dangerous_schemes = ['javascript:', 'data:', 'file:', 'ftp:', 'vbscript:', 'about:']
+        target_lower = target.lower()
+        if any(scheme in target_lower for scheme in dangerous_schemes):
+            raise ValueError("Dangerous URL scheme detected")
+        
         # Add protocol if missing
         if not target.startswith(('http://', 'https://')):
             target = f"https://{target}"
@@ -128,25 +134,31 @@ class EnhancedVulnerabilityScanner:
         if not parsed.netloc:
             raise ValueError(f"Invalid URL format: {target}")
         
+        # Security: Validate URL scheme (double-check after protocol addition)
+        allowed_schemes = ['http', 'https']
+        if parsed.scheme not in allowed_schemes:
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+        
         # Security: Prevent local/private IP scanning
         import ipaddress
-        try:
-            # Extract hostname/IP from netloc
-            hostname = parsed.hostname
-            if hostname:
-                # Check if it's an IP address
-                try:
-                    ip = ipaddress.ip_address(hostname)
-                    # Block private/local IPs
-                    if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast:
-                        raise ValueError("Scanning private/local IP addresses is not allowed")
-                except ipaddress.AddressValueError:
+        # Extract hostname/IP from netloc
+        hostname = parsed.hostname
+        if hostname:
+            # Check if it's an IP address
+            try:
+                ip = ipaddress.ip_address(hostname)
+                # Block private/local IPs
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast:
+                    raise ValueError("Scanning private/local IP addresses is not allowed")
+            except (ipaddress.AddressValueError, ValueError) as e:
+                # If it's not an IP address, treat it as hostname and check for localhost patterns
+                if "does not appear to be an IPv4 or IPv6 address" in str(e):
                     # It's a hostname, check for localhost patterns
                     if hostname.lower() in ['localhost', '127.0.0.1', '::1'] or hostname.endswith('.local'):
                         raise ValueError("Scanning localhost is not allowed")
-        except Exception:
-            # If hostname parsing fails, allow it to proceed (might be valid domain)
-            pass
+                else:
+                    # Re-raise other ValueErrors (these are validation errors)
+                    raise
         
         # Validate port if specified
         if parsed.port:
@@ -189,16 +201,8 @@ class EnhancedVulnerabilityScanner:
         if not disable_ssl:
             import ssl
             try:
-                # Create secure SSL context
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = True
-                ssl_context.verify_mode = ssl.CERT_REQUIRED
-                
                 # Configure session with SSL context
-                session.mount('https://', requests.adapters.HTTPAdapter(
-                    max_retries=3,
-                    socket_options=[(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)],
-                ))
+                session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
             except Exception as e:
                 logger.warning(f"Failed to configure SSL context: {e}")
                 # Fall back to basic SSL verification
