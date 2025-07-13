@@ -32,6 +32,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Security logging configuration
+security_logger = logging.getLogger('security')
+security_handler = logging.FileHandler('security.log')
+security_handler.setFormatter(logging.Formatter('%(asctime)s - SECURITY - %(levelname)s - %(message)s'))
+security_logger.addHandler(security_handler)
+security_logger.setLevel(logging.WARNING)
+
+def log_security_event(event_type, message, client_ip=None, username=None):
+    """Log security-related events"""
+    context = []
+    if client_ip:
+        context.append(f"IP={client_ip}")
+    if username:
+        context.append(f"User={username}")
+    
+    context_str = f"[{', '.join(context)}]" if context else ""
+    security_logger.warning(f"{event_type}: {message} {context_str}")
+
 # Authentication configuration
 AUTH_CONFIG = {
     'enabled': os.getenv('VULN_SCANNER_AUTH_ENABLED', 'true').lower() == 'true',
@@ -45,6 +63,52 @@ AUTH_CONFIG = {
 # Set password hash (SHA-256 of password)
 default_password = os.getenv('VULN_SCANNER_PASSWORD', 'securepassword123')
 AUTH_CONFIG['password_hash'] = hashlib.sha256(default_password.encode()).hexdigest()
+
+# IP Whitelisting configuration
+class IPWhitelisting:
+    def __init__(self):
+        self.enabled = os.getenv('VULN_SCANNER_IP_WHITELIST_ENABLED', 'false').lower() == 'true'
+        self.whitelist = []
+        
+        if self.enabled:
+            # Load whitelist from environment variable
+            whitelist_env = os.getenv('VULN_SCANNER_IP_WHITELIST', '')
+            if whitelist_env:
+                self.whitelist = [ip.strip() for ip in whitelist_env.split(',') if ip.strip()]
+            
+            # Add localhost by default
+            if not self.whitelist:
+                self.whitelist = ['127.0.0.1', '::1', 'localhost']
+            
+            logger.info(f"IP whitelisting enabled with {len(self.whitelist)} allowed IPs")
+    
+    def is_allowed(self, client_ip):
+        """Check if IP is whitelisted"""
+        if not self.enabled:
+            return True
+        
+        # Check exact match
+        if client_ip in self.whitelist:
+            return True
+        
+        # Check for localhost variations
+        if client_ip in ['127.0.0.1', '::1', 'localhost']:
+            return True
+        
+        # Check for private IP ranges if localhost is whitelisted
+        if 'localhost' in self.whitelist or '127.0.0.1' in self.whitelist:
+            import ipaddress
+            try:
+                ip = ipaddress.ip_address(client_ip)
+                if ip.is_private or ip.is_loopback:
+                    return True
+            except ValueError:
+                pass
+        
+        return False
+
+# Global IP whitelist manager
+ip_whitelist = IPWhitelisting()
 
 # Session management
 class SessionManager:
@@ -115,6 +179,30 @@ class SessionManager:
         """Reset failed attempts after successful login"""
         if ip_address in self.failed_attempts:
             del self.failed_attempts[ip_address]
+    
+    def generate_csrf_token(self, session_id):
+        """Generate CSRF token for session"""
+        if session_id not in self.sessions:
+            return None
+        
+        # Generate CSRF token tied to session
+        token_data = f"{session_id}:{self.secret_key}:{datetime.now().timestamp()}"
+        token = hashlib.sha256(token_data.encode()).hexdigest()
+        
+        # Store token in session
+        self.sessions[session_id]['csrf_token'] = token
+        return token
+    
+    def validate_csrf_token(self, session_id, provided_token):
+        """Validate CSRF token"""
+        if not session_id or session_id not in self.sessions:
+            return False
+            
+        session_token = self.sessions[session_id].get('csrf_token')
+        if not session_token:
+            return False
+            
+        return hmac.compare_digest(session_token, provided_token)
 
 # Global session manager
 session_manager = SessionManager() if AUTH_CONFIG['enabled'] else None
@@ -204,6 +292,41 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
         except Exception:
             logger.error(f"Error logging message: {sanitized_message}")
     
+    def _check_ip_whitelist(self):
+        """Check if client IP is whitelisted"""
+        client_ip = self.address_string()
+        if not ip_whitelist.is_allowed(client_ip):
+            log_security_event("ACCESS_DENIED", f"Non-whitelisted IP access attempt", client_ip)
+            self.send_error(403, "Access denied")
+            return False
+        return True
+    
+    def _validate_user_agent(self):
+        """Validate user agent for suspicious patterns"""
+        user_agent = self.headers.get('User-Agent', '')
+        client_ip = self.address_string()
+        
+        # Check for empty user agent
+        if not user_agent:
+            log_security_event("SUSPICIOUS_REQUEST", "Empty User-Agent header", client_ip)
+            return True  # Allow but log
+        
+        # Check for suspicious patterns
+        suspicious_patterns = [
+            'sqlmap', 'nikto', 'dirb', 'gobuster', 'wpscan', 'nmap',
+            'burp', 'zap', 'w3af', 'masscan', 'nuclei', 'httpx',
+            'bot', 'crawler', 'spider', 'scraper'
+        ]
+        
+        user_agent_lower = user_agent.lower()
+        for pattern in suspicious_patterns:
+            if pattern in user_agent_lower:
+                log_security_event("SUSPICIOUS_USER_AGENT", f"Detected pattern '{pattern}' in User-Agent: {user_agent}", client_ip)
+                # Don't block, just log for now
+                break
+        
+        return True
+    
     def _check_authentication(self):
         """Check if request is authenticated"""
         if not AUTH_CONFIG['enabled']:
@@ -248,6 +371,31 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
         
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         return password_hash == AUTH_CONFIG['password_hash']
+    
+    def _get_session_id(self):
+        """Extract session ID from cookies"""
+        cookie_header = self.headers.get('Cookie', '')
+        if not cookie_header:
+            return None
+            
+        cookies = {}
+        for cookie in cookie_header.split(';'):
+            if '=' in cookie:
+                key, value = cookie.strip().split('=', 1)
+                cookies[key] = value
+        
+        return cookies.get('session_id')
+    
+    def _validate_csrf_token(self, provided_token):
+        """Validate CSRF token for state-changing requests"""
+        if not AUTH_CONFIG['enabled'] or not session_manager:
+            return True
+            
+        session_id = self._get_session_id()
+        if not session_id:
+            return False
+            
+        return session_manager.validate_csrf_token(session_id, provided_token)
         
     def _check_rate_limit(self):
         """Check if request should be rate limited"""
@@ -275,6 +423,12 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests with enhanced routing and security"""
         try:
+            if not self._check_ip_whitelist():
+                return
+            
+            if not self._validate_user_agent():
+                return
+                
             if not self._check_rate_limit():
                 return
             
@@ -304,6 +458,12 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         """Handle POST requests with enhanced routing and security"""
         try:
+            if not self._check_ip_whitelist():
+                return
+            
+            if not self._validate_user_agent():
+                return
+                
             if not self._check_rate_limit():
                 return
                 
@@ -365,9 +525,11 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
                 with open(template_path, 'r', encoding='utf-8') as f:
                     self.wfile.write(f.read().encode('utf-8'))
             else:
-                self.send_error(404, f"Template {template_name} not found")
+                # Security: Don't reveal specific file paths
+                self.send_error(404, "Page not found")
         except Exception as e:
-            logger.error(f"Error serving template {template_name}: {e}")
+            # Security: Don't reveal internal error details
+            self._safe_log_error(f"Error serving template {template_name}: {e}")
             self.send_error(500, "Internal Server Error")
     
     def serve_static_file(self):
@@ -428,15 +590,28 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
                 mode = 'rb' if content_type.startswith('image/') else 'r'
                 encoding = None if mode == 'rb' else 'utf-8'
                 
+                # Security: Limit file size to prevent DoS
+                max_file_size = 10 * 1024 * 1024  # 10MB limit
+                try:
+                    file_size = os.path.getsize(normalized_path)
+                    if file_size > max_file_size:
+                        self.send_error(413, "File too large")
+                        return
+                except OSError:
+                    self.send_error(404, "File not found")
+                    return
+                
                 with open(normalized_path, mode, encoding=encoding) as f:
                     content = f.read()
                     if isinstance(content, str):
                         content = content.encode('utf-8')
                     self.wfile.write(content)
             else:
-                self.send_error(404, "Static file not found")
+                self.send_error(404, "File not found")
         except Exception as e:
-            logger.error(f"Error serving static file {self.path}: {e}")
+            # Security: Don't reveal internal paths or errors
+            self._safe_log_error(f"Error serving static file {self.path}: {e}")
+            self.send_error(500, "Internal Server Error")
             self.send_error(500, "Internal Server Error")
     
     def handle_scan_status(self):
@@ -525,6 +700,12 @@ class EnhancedScanHandler(SimpleHTTPRequestHandler):
             # Security: Validate required fields and types
             if not isinstance(data, dict):
                 self.send_json_error(400, "Request must be a JSON object")
+                return
+            
+            # Security: Validate CSRF token for state-changing requests
+            csrf_token = data.get('csrf_token')
+            if not self._validate_csrf_token(csrf_token):
+                self.send_json_error(403, "Invalid CSRF token")
                 return
             
             target = data.get('target', '').strip()
